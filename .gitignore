@@ -1,0 +1,50 @@
+# ============================================================================
+# BACKEND - Python Virtual Environment & Cache
+# ============================================================================
+backend/venv/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/tests/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+
+# ============================================================================
+# BACKEND - Environment & Logs
+# ============================================================================
+backend/.env
+backend/*.log
+
+# ============================================================================
+# BACKEND - ML Models & Database
+# ============================================================================
+backend/ml_models/*.pkl
+backend/ml_models/*.joblib
+backend/ml_models/*.pth
+backend/ml_models/*.h5
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+# ============================================================================
+# FRONTEND - Dependencies & Build
+# ============================================================================
+frontend/node_modules/
+frontend/dist/
+frontend/npm-debug.log
+frontend/npm-debug.log.*
+
+# ============================================================================
+# FRONTEND - Environment
+# ============================================================================
+frontend/.env
+frontend/.env.local
+
+# ============================================================================
+# IDE & OS Files
+# ============================================================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
