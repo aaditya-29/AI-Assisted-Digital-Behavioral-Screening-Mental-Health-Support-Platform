@@ -258,6 +258,19 @@
   animation: fadeInUp 0.4s ease 0.15s both;
 }
 
+/* Staggered entrance for cards */
+.dashboard-grid .dashboard-card { animation: fadeInUp 420ms var(--transition) both; }
+.dashboard-grid .dashboard-card:nth-child(1) { animation-delay: 80ms; }
+.dashboard-grid .dashboard-card:nth-child(2) { animation-delay: 140ms; }
+.dashboard-grid .dashboard-card:nth-child(3) { animation-delay: 200ms; }
+.dashboard-grid .dashboard-card:nth-child(4) { animation-delay: 260ms; }
+.dashboard-grid .dashboard-card:nth-child(5) { animation-delay: 320ms; }
+.dashboard-grid .dashboard-card:nth-child(6) { animation-delay: 380ms; }
+
+/* subtle icon float for first-row cards */
+.dashboard-grid .dashboard-card .card-icon-wrapper { transition: transform 0.6s cubic-bezier(.2,.9,.2,1); }
+.dashboard-grid .dashboard-card:hover .card-icon-wrapper { transform: translateY(-6px) scale(1.06); }
+
 .dashboard-card {
   display: flex;
   flex-direction: column;
@@ -381,4 +394,39 @@
 .note-professional { font-size: 14px; font-weight: 600; color: var(--primary); }
 .note-date { font-size: 12px; color: var(--text-muted); }
 .note-content { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0; white-space: pre-wrap; }
+
+/* Prominent notes layout */
+.notes-prominent { margin-bottom: 28px; }
+.notes-header-row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.notes-list-horizontal { display:flex; gap:12px; }
+.note-card-prominent { flex: 1 1 0; background: linear-gradient(180deg, var(--surface) 0%, var(--surface-hover) 100%); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 6px 18px rgba(16,24,40,0.04); min-width: 220px; display:flex; flex-direction:column; justify-content:space-between; }
+.note-card-prominent .note-header { margin-bottom:8px; }
+.note-meta-row { display:flex; justify-content:space-between; align-items:center; margin-top:12px; }
+.note-badge { background: linear-gradient(90deg,#ffecd1,#ffd6b3); color:#8a4b00; padding:6px 8px; border-radius:999px; font-weight:700; font-size:12px; }
+.note-card-prominent.note-action { border-left:4px solid #ffb703; }
+
+/* Notes modal */
+.notes-modal-overlay { position:fixed; inset:0; background:rgba(2,6,23,0.6); display:flex; align-items:center; justify-content:center; z-index:1200; }
+.notes-modal { width:min(960px, 96%); max-height:86vh; overflow:auto; background:var(--surface); border-radius:10px; padding:20px; box-shadow:0 30px 60px rgba(2,6,23,0.4); }
+.notes-modal .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.notes-modal .modal-body { display:flex; flex-direction:column; gap:12px; }
+.notes-modal .note-full { border:1px solid var(--border); border-radius:8px; padding:12px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); }
+.notes-modal .note-full .note-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+
+/* Modal single-card style */
+.note-modal-card { border:1px solid var(--border); border-radius:10px; padding:14px; background:var(--surface); box-shadow: 0 8px 18px rgba(2,6,23,0.06); }
+.note-modal-card + .note-modal-card { margin-top: 10px; }
+.note-modal-card .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.note-modal-card .note-professional { font-weight:700; color:var(--primary); }
+.note-modal-card .note-date { font-size:12px; color:var(--text-muted); margin-top:4px; }
+.note-modal-card .card-body { padding-top:6px; }
+
+@media (max-width: 860px) {
+  .notes-list-horizontal { flex-direction: column; }
+}
+
+/* Single dashboard notes card */
+.notes-dashboard-card { display:flex; flex-direction:column; justify-content:space-between; }
+.notes-dashboard-card .card-icon-wrapper { background: linear-gradient(180deg,#f7fafc,#fff); }
+.note-badge.small { padding:4px 8px; font-size:12px; border-radius:8px; }
 

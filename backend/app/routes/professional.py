@@ -200,7 +200,21 @@ async def get_my_consultation_requests(
         query = query.filter(ConsultationRequest.status == status_filter)
     
     requests = query.order_by(ConsultationRequest.created_at.desc()).all()
-    return requests
+
+    # Return enriched objects including patient name so frontend can display it
+    out = []
+    for r in requests:
+        out.append({
+            "id": r.id,
+            "user_id": r.user_id,
+            "professional_id": r.professional_id,
+            "first_name": r.user.first_name if r.user else None,
+            "last_name": r.user.last_name if r.user else None,
+            "status": r.status.value if hasattr(r.status, 'value') else r.status,
+            "message": r.message,
+            "created_at": r.created_at,
+        })
+    return out
 
 
 @router.patch("/consultations/{request_id}", response_model=ConsultationRequestResponse)
@@ -365,7 +379,13 @@ async def get_patient_detail(
             "id": s.id,
             "completed_at": s.completed_at,
             "raw_score": s.raw_score,
-            "risk_level": s.risk_level
+            "risk_level": s.risk_level.value if s.risk_level else None,
+            "ml_probability": s.ml_risk_score,
+            "ml_probability_label": s.ml_probability_label,
+            "family_asd": s.family_asd,
+            "jaundice": s.jaundice,
+            "completed_by": s.completed_by,
+            "age_group_used": s.age_group_used,
         } for s in screenings],
         latest_analysis={
             "created_at": latest_analysis.created_at,
@@ -460,3 +480,58 @@ async def get_patient_notes(
     ).order_by(ProfessionalNote.created_at.desc()).all()
     
     return notes
+
+
+@router.get("/patients/{patient_id}/screenings/{session_id}")
+async def get_patient_screening_detail(
+    patient_id: int,
+    session_id: int,
+    professional: User = Depends(get_professional_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get full details of a patient's screening session including all Q&A responses.
+    Professional only. Requires accepted consultation request.
+    """
+    # Verify access
+    consultation = db.query(ConsultationRequest).filter(
+        ConsultationRequest.user_id == patient_id,
+        ConsultationRequest.professional_id == professional.id,
+        ConsultationRequest.status == "accepted"
+    ).first()
+    if not consultation:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this patient's data"
+        )
+
+    from app.services.screening_service import ScreeningService
+
+    service = ScreeningService(db)
+    try:
+        session, detailed_responses = service.get_session_with_responses(session_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Screening session not found"
+        )
+
+    if session.user_id != patient_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    return {
+        "id": session.id,
+        "completed_at": session.completed_at,
+        "raw_score": session.raw_score,
+        "risk_level": session.risk_level.value if session.risk_level else None,
+        "ml_probability": session.ml_risk_score,
+        "ml_probability_label": session.ml_probability_label,
+        "family_asd": session.family_asd,
+        "jaundice": session.jaundice,
+        "completed_by": session.completed_by,
+        "age_group_used": session.age_group_used,
+        "responses": detailed_responses,
+    }

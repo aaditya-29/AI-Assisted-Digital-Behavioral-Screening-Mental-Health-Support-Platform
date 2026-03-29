@@ -342,7 +342,12 @@ function Screening() {
             <button onClick={goToNext} disabled={!isAnswered} className="btn btn-primary">Next →</button>
           ) : (
             <button onClick={submitScreening} disabled={!allAnswered || submitting} className="btn btn-success">
-              {submitting ? 'Submitting…' : 'Submit Screening ✓'}
+              {submitting ? (
+                <span className="submitting-label">
+                  <span className="spinner-inline"></span>
+                  Analysing with AI…
+                </span>
+              ) : 'Submit Screening ✓'}
             </button>
           )}
         </div>
@@ -373,7 +378,24 @@ function ScreeningResultInline({ result, onNewScreening }) {
     }
   }
 
+  const getProbabilityConfig = (label) => {
+    switch (label?.toLowerCase()) {
+      case 'low':
+        return { color: 'green', text: 'Low Likelihood', icon: '✓', desc: 'The AI model did not detect significant ASD-related patterns in your responses.' }
+      case 'moderate':
+        return { color: 'yellow', text: 'Moderate Likelihood', icon: '⚠', desc: 'The AI model detected some ASD-related patterns. A professional evaluation may be helpful.' }
+      case 'high':
+        return { color: 'orange', text: 'High Likelihood', icon: '⚠', desc: 'The AI model detected notable ASD-related patterns. Professional evaluation is recommended.' }
+      case 'very_high':
+        return { color: 'red', text: 'Very High Likelihood', icon: '!', desc: 'The AI model detected strong ASD-related patterns. We strongly recommend seeking a professional evaluation.' }
+      default:
+        return { color: 'gray', text: 'Assessment Unavailable', icon: '?', desc: 'ML prediction could not be computed. Use the AQ score above as a guide.' }
+    }
+  }
+
   const riskColor = getRiskColor(result.risk_level)
+  const probConfig = getProbabilityConfig(result.ml_probability_label)
+  const mlPrediction = result.ml_prediction  // 0 or 1
 
   return (
     <div className="screening-container">
@@ -386,15 +408,30 @@ function ScreeningResultInline({ result, onNewScreening }) {
           </p>
         </div>
 
-        {/* Score display */}
+        {/* AQ Score display */}
         <div className={`score-display score-${riskColor}`}>
           <div className="score-circle">
             <span className="score-value">{result.raw_score}</span>
             <span className="score-max">/{result.max_score}</span>
           </div>
           <div className="risk-label">
-            Risk Level: <strong className="capitalize">{result.risk_level}</strong>
+            AQ Score Risk: <strong className="capitalize">{result.risk_level}</strong>
           </div>
+        </div>
+
+        {/* ML Prediction Block */}
+        <div className={`ml-prediction-block ml-${probConfig.color}`}>
+          <div className="ml-prediction-header">
+            <span className="ml-icon">{probConfig.icon}</span>
+            <div>
+              <h3>AI Model Assessment</h3>
+              <span className="ml-probability-label">{probConfig.text}</span>
+            </div>
+            <div className="ml-badge">
+              {mlPrediction === 1 ? 'ASD Traits Detected' : mlPrediction === 0 ? 'No ASD Traits Detected' : 'N/A'}
+            </div>
+          </div>
+          <p className="ml-description">{probConfig.desc}</p>
         </div>
 
         {/* Risk description */}

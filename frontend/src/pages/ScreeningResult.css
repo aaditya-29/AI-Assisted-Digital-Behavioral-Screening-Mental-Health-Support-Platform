@@ -38,6 +38,18 @@
 .disclaimer-box { background: var(--warning-bg); border: 1px solid var(--warning-border); border-radius: var(--radius-md); padding: 18px; font-size: 13px; color: #92400e; line-height: 1.6; margin-bottom: 24px; }
 .connect-professional-banner { background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08)); border: 1px solid rgba(99,102,241,0.2); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 24px; text-align: center; }
 .connect-professional-banner p { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+/* ML Prediction Block */
+.ml-prediction-block { border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 24px; border: 1.5px solid; }
+.ml-prediction-block.ml-green { background: var(--risk-low-bg, #f0fdf4); border-color: #86efac; }
+.ml-prediction-block.ml-yellow { background: var(--risk-moderate-bg, #fffbeb); border-color: #fde68a; }
+.ml-prediction-block.ml-orange { background: #fff7ed; border-color: #fdba74; }
+.ml-prediction-block.ml-red { background: var(--risk-high-bg, #fef2f2); border-color: #fca5a5; }
+.ml-prediction-block.ml-gray { background: #f8fafc; border-color: var(--border); }
+.ml-prediction-header { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+.ml-prediction-header h3 { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 4px; }
+.ml-probability-label { font-size: 18px; font-weight: 800; color: var(--text-primary); }
+.ml-badge { margin-left: auto; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: var(--radius-full); background: rgba(0,0,0,0.06); color: var(--text-secondary); white-space: nowrap; }
+.ml-description { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
 .result-detail-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 @media (max-width: 600px) {
   .result-detail-container { padding: 24px 16px 60px; }

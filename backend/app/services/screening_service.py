@@ -17,6 +17,7 @@ from app.models.screening import (
     RiskLevel,
     AgeGroup
 )
+from app.models.user import User
 from app.repositories.screening_repository import (
     ScreeningSessionRepository,
     ScreeningResponseRepository,
@@ -24,6 +25,7 @@ from app.repositories.screening_repository import (
     OptionRepository
 )
 from app.utils.logging import get_logger
+from app.services import ml_service
 
 logger = get_logger(__name__)
 
@@ -119,7 +121,7 @@ AQ10_MAX_SCORE = 10
 
 def calculate_risk_level(raw_score: int) -> RiskLevel:
     """
-    Determine risk level based on raw AQ-10 score.
+    Determine risk level based on raw AQ-10 score (fallback, no ML).
     
     AQ-10 Scoring:
     - 0-2: Low likelihood
@@ -132,6 +134,22 @@ def calculate_risk_level(raw_score: int) -> RiskLevel:
         return RiskLevel.MODERATE
     else:
         return RiskLevel.HIGH
+
+
+def calculate_risk_level_ml(ml_probability_label: str) -> RiskLevel:
+    """
+    Determine risk level using ML probability label.
+
+    low       → LOW
+    moderate  → MODERATE
+    high      → HIGH
+    very_high → HIGH
+    """
+    if ml_probability_label == "low":
+        return RiskLevel.LOW
+    if ml_probability_label == "moderate":
+        return RiskLevel.MODERATE
+    return RiskLevel.HIGH
 
 
 def get_risk_description(risk_level: RiskLevel) -> str:
@@ -308,7 +326,7 @@ class ScreeningService:
         """
         Complete a screening session and calculate results.
         
-        Calculates raw score, risk level, and optionally ML risk score.
+        Calculates raw score, risk level, and ML-based ASD prediction.
         """
         session = self.session_repo.get_by_id(session_id)
         if not session:
@@ -331,31 +349,62 @@ class ScreeningService:
                 f"Incomplete screening: {len(responses)}/{len(session_questions)} questions answered"
             )
         
-        # Calculate raw score
+        # Build per-question scores dict (ML feature keys) and calculate raw score
         raw_score = 0
+        question_scores_dict: Dict[str, int] = {}
         for response in responses:
+            question = self.db.query(Question).filter(Question.id == response.question_id).first()
             option = self.db.query(Option).filter(Option.id == response.selected_option_id).first()
             if option:
                 raw_score += option.score_value
+            if question and option:
+                ml_key = ml_service.map_label_to_ml_key(question.label or "")
+                question_scores_dict[ml_key] = option.score_value
         
-        # Determine risk level
-        risk_level = calculate_risk_level(raw_score)
-        
+        # Run ML model (required — no score-based fallback)
+        user = self.db.query(User).filter_by(id=session.user_id).first()
+        age_years = ml_service.get_age_years(user.date_of_birth if user else None)
+        sex = ml_service.normalize_sex(user.gender if user else None)
+        ethnicity = (user.ethnicity if user else None)
+        ml_probability, ml_label = ml_service.predict_asd(
+            question_scores=question_scores_dict,
+            age_years=age_years,
+            sex=sex,
+            ethnicity=ethnicity,
+            jaundice=session.jaundice,
+            family_asd=session.family_asd,
+            completed_by=session.completed_by,
+        )
+        ml_pred = 1 if ml_probability >= 0.5 else 0
+        risk_level = calculate_risk_level_ml(ml_label)
+
+        # Build full JSON to store (question scores + demographics)
+        full_scores_json = {**question_scores_dict}
+        if user:
+            full_scores_json["Age_Years"] = age_years
+            full_scores_json["Sex"] = user.gender
+            full_scores_json["Ethnicity"] = user.ethnicity
+        full_scores_json["Jaundice"] = session.jaundice
+        full_scores_json["Family_mem_with_ASD"] = session.family_asd
+        full_scores_json["Who_completed_the_test"] = session.completed_by
+
         # Update session
         session.completed_at = datetime.utcnow()
         session.raw_score = raw_score
         session.risk_level = risk_level
-        
-        # TODO: Add ML risk score calculation here
-        # session.ml_risk_score = ml_service.predict_risk(responses)
-        # session.model_version = ml_service.get_model_version()
+        session.ml_prediction = ml_pred
+        session.ml_probability_label = ml_label
+        session.ml_risk_score = ml_probability        # actual probability (0.0–1.0)
+        session.question_scores = full_scores_json
+        session.model_version = "asd_pipeline_v1"
         
         self.db.commit()
         self.db.refresh(session)
         
         logger.info(
             f"Completed screening session {session_id}: "
-            f"score={raw_score}, risk_level={risk_level.value}"
+            f"score={raw_score}, risk_level={risk_level.value}, "
+            f"ml_probability={ml_probability:.4f}, ml_label={ml_label}"
         )
         
         return session

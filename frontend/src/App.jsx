@@ -22,6 +22,7 @@ import Tasks from './pages/Tasks'
 import TaskPlayer from './pages/TaskPlayer'
 import TaskHistory from './pages/TaskHistory'
 import Profile from './pages/Profile'
+import Analysis from './pages/Analysis'
 
 function App() {
   return (
@@ -96,6 +97,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Resources />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis"
+            element={
+              <ProtectedRoute>
+                <Analysis />
               </ProtectedRoute>
             }
           />

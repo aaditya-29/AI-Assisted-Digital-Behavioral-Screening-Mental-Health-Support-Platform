@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.utils.logging import get_logger
-from app.routes import auth, admin, professional, users, screening, tasks, journal, resources, notifications
+from app.routes import auth, admin, professional, users, screening, tasks, journal, resources, notifications, analysis
 from app.database import Base, engine
 
 # 🔥 IMPORTANT: Import all models so SQLAlchemy registers them
@@ -75,6 +75,7 @@ app.include_router(tasks.router, prefix="/api/v1")
 app.include_router(journal.router, prefix="/api/v1")
 app.include_router(resources.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
+app.include_router(analysis.router, prefix="/api/v1")
 
 # -----------------------------
 # Startup Event

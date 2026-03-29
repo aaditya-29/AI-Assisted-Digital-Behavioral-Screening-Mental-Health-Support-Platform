@@ -59,6 +59,8 @@ class ConsultationRequestResponse(BaseModel):
     id: int
     user_id: int
     professional_id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     status: str
     message: Optional[str] = None
     created_at: datetime

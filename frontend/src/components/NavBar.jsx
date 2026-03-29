@@ -16,7 +16,10 @@ export default function NavBar() {
   const [counts, setCounts] = useState({ total_unread: 0, consultation_requests: 0, notes: 0, journals: 0, resources: 0, other: 0 })
   const [notifications, setNotifications] = useState([])
   const [showPanel, setShowPanel] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const panelRef = useRef(null)
+  const hamburgerRef = useRef(null)
+  const mobileRef = useRef(null)
 
   useEffect(() => { fetchCounts() }, [location.pathname])
   useEffect(() => {
@@ -27,6 +30,8 @@ export default function NavBar() {
   useEffect(() => {
     const handleClick = (e) => {
       if (panelRef.current && !panelRef.current.contains(e.target)) setShowPanel(false)
+      // Close mobile menu only when clicking outside both the menu and the hamburger button
+      if (mobileRef.current && !mobileRef.current.contains(e.target) && !(hamburgerRef.current && hamburgerRef.current.contains(e.target))) setShowMobileMenu(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -115,7 +120,7 @@ export default function NavBar() {
       <div className="main-nav-inner">
         <Link to="/dashboard" className="main-nav-logo">
           <span className="main-nav-logo-icon">🧠</span>
-          MindBridge{logoSuffix}
+          <span className="main-nav-logo-text">MindBridge{logoSuffix}</span>
         </Link>
 
         <div className="main-nav-links">
@@ -131,6 +136,11 @@ export default function NavBar() {
           ))}
         </div>
 
+        {/* Mobile hamburger */}
+        <button ref={hamburgerRef} className="nav-hamburger" aria-label="Menu" onClick={() => setShowMobileMenu(v => !v)}>
+          <span className={`hamburger-icon ${showMobileMenu ? 'open' : ''}`}></span>
+        </button>
+
         <div className="main-nav-right">
           {/* Role quick-switch buttons */}
           {isAdmin && !path.startsWith('/admin') && (
@@ -144,7 +154,7 @@ export default function NavBar() {
           <div className="notif-wrapper" ref={panelRef}>
             <button className="notif-bell" onClick={togglePanel} title="Notifications">
               🔔
-              {counts.total_unread > 0 && <span className="notif-count">{counts.total_unread}</span>}
+              {counts.total_unread > 0 && <span className="notif-count pulse">{counts.total_unread}</span>}
             </button>
 
             {showPanel && (
@@ -183,6 +193,28 @@ export default function NavBar() {
 
           <button onClick={handleLogout} className="btn btn-secondary btn-sm">Sign Out</button>
         </div>
+
+        {/* Mobile Menu Panel */}
+        {showMobileMenu && (
+          <div className="mobile-menu" ref={mobileRef}>
+            <div className="mobile-menu-links">
+              {links.map(link => (
+                <Link key={link.to} to={link.to} className={`mobile-link ${isActive(link.to) ? 'active' : ''}`} onClick={() => setShowMobileMenu(false)}>
+                  {link.label}
+                  {link.badge > 0 && <span className="nav-badge">{link.badge}</span>}
+                </Link>
+              ))}
+            </div>
+            <div className="mobile-menu-actions">
+              {isAdmin && !location.pathname.startsWith('/admin') && (
+                <Link to="/admin" className="nav-role-btn mobile" onClick={() => setShowMobileMenu(false)}>⚙ Admin</Link>
+              )}
+              {isProfessional && !isAdmin && !location.pathname.startsWith('/professional') && (
+                <Link to="/professional" className="nav-role-btn mobile" onClick={() => setShowMobileMenu(false)}>👨‍⚕️ Portal</Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   )

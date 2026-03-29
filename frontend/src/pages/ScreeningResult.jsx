@@ -46,6 +46,21 @@ function ScreeningResultDetail() {
     }
   }
 
+  const getProbabilityConfig = (label) => {
+    switch (label?.toLowerCase()) {
+      case 'low':
+        return { color: 'green', text: 'Low Likelihood', desc: 'AI model did not detect significant ASD-related patterns.' }
+      case 'moderate':
+        return { color: 'yellow', text: 'Moderate Likelihood', desc: 'AI model detected some ASD-related patterns. Consider a professional evaluation.' }
+      case 'high':
+        return { color: 'orange', text: 'High Likelihood', desc: 'AI model detected notable ASD-related patterns. Professional evaluation is recommended.' }
+      case 'very_high':
+        return { color: 'red', text: 'Very High Likelihood', desc: 'AI model detected strong ASD-related patterns. Professional evaluation is strongly recommended.' }
+      default:
+        return { color: 'gray', text: 'Assessment Unavailable', desc: 'ML prediction was not available for this session.' }
+    }
+  }
+
   if (loading) {
     return (
       <div className="result-detail-container">
@@ -72,6 +87,7 @@ function ScreeningResultDetail() {
   }
 
   const riskColor = getRiskColor(result.risk_level)
+  const probConfig = getProbabilityConfig(result.ml_probability_label)
 
   return (
     <div className="result-detail-container">
@@ -101,14 +117,28 @@ function ScreeningResultDetail() {
           <span className="score-of">/ {result.max_score}</span>
         </div>
         <div className="risk-info">
-          <span className="risk-level capitalize">{result.risk_level} Risk</span>
-          {result.ml_risk_score && (
-            <span className="ml-score">
-              ML Confidence: {(result.ml_risk_score * 100).toFixed(1)}%
-            </span>
-          )}
+          <span className="risk-level capitalize">AQ Score: {result.risk_level} Risk</span>
         </div>
       </div>
+
+      {/* ML Prediction Block */}
+      {result.ml_probability_label && (
+        <div className={`ml-prediction-block ml-${probConfig.color}`}>
+          <div className="ml-prediction-header">
+            <div>
+              <h3>AI Model Assessment</h3>
+              <span className="ml-probability-label">{probConfig.text}</span>
+            </div>
+            <div className="ml-badge">
+              {result.ml_risk_score != null
+                ? `${(result.ml_risk_score * 100).toFixed(1)}% probability`
+                : result.ml_prediction === 1 ? 'ASD Traits Detected' : 'No ASD Traits Detected'
+              }
+            </div>
+          </div>
+          <p className="ml-description">{probConfig.desc}</p>
+        </div>
+      )}
 
       {/* Description */}
       <div className="section">

@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import Base
+from app.database import Base, engine
 from app.models import *
 from app.config import settings
 
@@ -37,11 +37,10 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # Use the application's engine (which applies any necessary connect_args,
+    # e.g. SSL settings) rather than creating a separate engine from the
+    # alembic config. This ensures the same connection behavior as the app.
+    connectable = engine
 
     with connectable.connect() as connection:
         context.configure(

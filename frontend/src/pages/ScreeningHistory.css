@@ -10,7 +10,7 @@
 .empty-state h2 { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
 .empty-state p { color: var(--text-secondary); font-size: 15px; max-width: 380px; margin: 0 auto 24px; line-height: 1.7; }
 .history-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; }
-.history-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 22px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; box-shadow: var(--shadow-xs); transition: all var(--transition); animation: fadeInUp 0.3s ease both; }
+.history-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 22px 24px; display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; box-shadow: var(--shadow-xs); transition: all var(--transition); animation: fadeInUp 0.3s ease both; }
 .history-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .history-card.incomplete { border-left: 4px solid var(--warning); opacity: 0.85; }
 .card-date { display: flex; flex-direction: column; gap: 2px; min-width: 160px; }
@@ -23,8 +23,14 @@
 .risk-badge { display: inline-flex; align-items: center; padding: 5px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700; text-transform: capitalize; }
 .badge-green { background: var(--success-bg); color: #065f46; border: 1px solid var(--success-border); }
 .badge-yellow { background: var(--warning-bg); color: #92400e; border: 1px solid var(--warning-border); }
+.badge-orange { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
 .badge-red { background: var(--error-bg); color: #991b1b; border: 1px solid var(--error-border); }
 .badge-gray { background: #f1f5f9; color: #475569; border: 1px solid var(--border); }
+.card-meta { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: -4px; }
+.meta-chip { font-size: 11px; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-full); padding: 3px 10px; font-weight: 500; }
+.card-ai { display: flex; align-items: center; gap: 8px; width: 100%; flex-wrap: wrap; }
+.ai-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.ai-prob { font-size: 15px; font-weight: 800; color: var(--text-primary); }
 .card-incomplete { display: flex; align-items: center; gap: 10px; flex: 1; }
 .incomplete-badge { display: inline-flex; align-items: center; padding: 5px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700; background: var(--warning-bg); color: #92400e; border: 1px solid var(--warning-border); }
 .card-incomplete p { font-size: 13px; color: var(--text-muted); margin: 0; }

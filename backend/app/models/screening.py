@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, Enum as SQLEnum, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -21,10 +21,13 @@ class ScreeningSession(Base):
     raw_score = Column(Integer, nullable=True)
     risk_level = Column(SQLEnum(RiskLevel), nullable=True)
     ml_risk_score = Column(Float, nullable=True)
+    ml_prediction = Column(Integer, nullable=True)           # 0 or 1 from ML model
+    ml_probability_label = Column(String(20), nullable=True) # low/moderate/high/very_high
+    question_scores = Column(JSON, nullable=True)            # per-question scores + demographics JSON
     model_version = Column(String(50), nullable=True)
     # Pre-screening info
-    family_asd = Column(String(10), nullable=True)          # "yes" / "no"
-    jaundice = Column(String(10), nullable=True)             # "yes" / "no"
+    family_asd = Column(String(10), nullable=True)          # "Yes" / "No"
+    jaundice = Column(String(10), nullable=True)             # "Yes" / "No"
     completed_by = Column(String(50), nullable=True)         # who completed the test
     age_group_used = Column(String(20), nullable=True)       # child/adolescent/adult
 

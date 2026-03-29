@@ -41,6 +41,16 @@ function ScreeningHistory() {
     }
   }
 
+  const getProbabilityBadgeClass = (label) => {
+    switch (label?.toLowerCase()) {
+      case 'low': return 'badge-green'
+      case 'moderate': return 'badge-yellow'
+      case 'high': return 'badge-orange'
+      case 'very_high': return 'badge-red'
+      default: return 'badge-gray'
+    }
+  }
+
   const handleDeleteIncomplete = async (sessionId) => {
     if (!confirm('Are you sure you want to delete this incomplete screening?')) {
       return
@@ -125,6 +135,35 @@ function ScreeningHistory() {
                       {screening.risk_level}
                     </span>
                   </div>
+
+                  {/* Pre-screening metadata */}
+                  <div className="card-meta">
+                    {screening.age_group_used && (
+                      <span className="meta-chip">👤 {screening.age_group_used}</span>
+                    )}
+                    {screening.family_asd && (
+                      <span className="meta-chip">🧬 Family ASD: {screening.family_asd}</span>
+                    )}
+                    {screening.jaundice && (
+                      <span className="meta-chip">🟡 Jaundice: {screening.jaundice}</span>
+                    )}
+                    {screening.completed_by && (
+                      <span className="meta-chip">📋 By: {screening.completed_by}</span>
+                    )}
+                  </div>
+
+                  {/* AI probability */}
+                  {screening.ml_risk_score != null && (
+                    <div className="card-ai">
+                      <span className="ai-label">AI Assessment:</span>
+                      <span className="ai-prob">{(screening.ml_risk_score * 100).toFixed(1)}%</span>
+                      {screening.ml_probability_label && (
+                        <span className={`risk-badge ${getProbabilityBadgeClass(screening.ml_probability_label)}`} style={{ fontSize: 11 }}>
+                          {screening.ml_probability_label.replace('_', ' ')}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <div className="card-actions">
                     <button 

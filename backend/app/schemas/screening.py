@@ -93,7 +93,10 @@ class ScreeningResultResponse(BaseModel):
     max_score: int
     risk_level: str
     risk_description: str
+    ml_prediction: Optional[int] = None          # 0 = no ASD traits, 1 = ASD traits present
+    ml_probability_label: Optional[str] = None   # low / moderate / high / very_high
     ml_risk_score: Optional[float] = None
+    question_scores: Optional[dict] = None       # per-question scores + demographics JSON
     # Pre-screening / profile fields stored with the session
     family_asd: Optional[str] = None
     jaundice: Optional[str] = None
@@ -111,6 +114,9 @@ class ScreeningSessionSummary(BaseModel):
     raw_score: Optional[int]
     risk_level: Optional[str]
     is_complete: bool
+    # ML fields
+    ml_probability_label: Optional[str] = None
+    ml_risk_score: Optional[float] = None      # actual probability (0.0–1.0)
     # Pre-screening / profile fields
     family_asd: Optional[str] = None
     jaundice: Optional[str] = None

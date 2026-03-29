@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import NavBar from '../../components/NavBar'
 import './Consultations.css'
+import { formatDateTimeIST } from '../../utils/formatDate'
 
 function Consultations() {
   const [requests, setRequests] = useState([])
@@ -60,11 +61,11 @@ function Consultations() {
                 {requests.map(r => (
                   <div key={r.id} className="request-card">
                     <div className="request-header">
-                      <div className="request-user">User #{r.user_id}</div>
+                      <div className="request-user">{r.first_name || r.last_name ? `${r.first_name || ''} ${r.last_name || ''}`.trim() : `User #${r.user_id}`}</div>
                       <span className={`request-status status-${r.status}`}>{r.status}</span>
                     </div>
                     {r.message && <div className="request-msg">{r.message}</div>}
-                    <div className="request-date">{new Date(r.created_at).toLocaleString()}</div>
+                    <div className="request-date">{formatDateTimeIST(r.created_at)}</div>
                     <div className="request-actions">
                       {r.status === 'pending' && (
                         <>
