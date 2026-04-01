@@ -13,6 +13,7 @@
 .screening-container {
   min-height: 100vh;
   background: var(--bg);
+  padding:0 !important;
 }
 .screening-inner {
   max-width: 720px;
