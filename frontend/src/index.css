@@ -93,29 +93,14 @@ body {
 @media (max-width: 860px) {
   html, body {
     overflow-x: hidden;
+    width: 100%;
   }
 
   /* Hide large decorative absolute elements that can cause overflow */
   .admin-banner::before,
   .professional-banner::before,
-  .dashboard-card::before,
   .auth-brand::before,
-  .auth-brand::after,
-  .ja-point.direction-right,
-  .ja-head-indicator,
-  .ja-gaze.direction-right,
-  .mobile-menu,
-  .notif-panel {
-    right: auto !important;
-  }
-
-  .admin-banner::before,
-  .professional-banner::before,
-  .auth-brand::before,
-  .auth-brand::after,
-  .ja-point.direction-right,
-  .ja-head-indicator,
-  .ja-gaze.direction-right {
+  .auth-brand::after {
     display: none !important;
   }
 
@@ -161,6 +146,20 @@ body {
   .page-content > * {
     min-width: 0 !important;
     max-width: 100% !important;
+  }
+
+  /* Ensure full-width for page wrappers */
+  .dashboard,
+  .screening-container,
+  .connect-page,
+  .consultations-page,
+  .user-mgmt-page,
+  .professional-page,
+  .profile-page,
+  .analysis-container,
+  .change-password-page {
+    width: 100%;
+    overflow-x: hidden;
   }
 }
 

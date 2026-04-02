@@ -45,9 +45,9 @@ export default function ChangePassword() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="change-password-page">
       <NavBar />
-      <div className="auth-form-panel">
+      <div className="change-password-container">
         <div className="auth-card">
           <div className="auth-header">
             <div className="auth-header-icon">🔑</div>
@@ -56,7 +56,7 @@ export default function ChangePassword() {
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            {msg && <div className={`server-error`} style={{ background: msg.type === 'success' ? 'var(--success-bg)' : undefined }}>{msg.text}</div>}
+            {msg && <div className={`server-error`} style={{ background: msg.type === 'success' ? 'var(--success-bg)' : undefined, borderColor: msg.type === 'success' ? 'var(--success-border)' : undefined, color: msg.type === 'success' ? '#065f46' : undefined }}>{msg.text}</div>}
 
             <div className="form-group">
               <label>Current Password</label>
@@ -85,7 +85,7 @@ export default function ChangePassword() {
             <button type="submit" className="btn-auth" disabled={isLoading}>{isLoading ? 'Updating…' : 'Change Password'}</button>
 
             <div style={{ marginTop: 12 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => navigate('/profile')}>Back to Profile</button>
+              <button type="button" className="btn btn-secondary btn-block" onClick={() => navigate('/profile')}>Back to Profile</button>
             </div>
           </form>
         </div>

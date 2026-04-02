@@ -379,10 +379,18 @@
     flex-direction: column;
     text-align: center;
     gap: 12px;
+    padding: 20px 16px;
   }
+  .admin-banner .btn,
+  .professional-banner .btn { width: 100%; justify-content: center; }
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+  .dashboard-main { padding: 24px 0 40px; }
+  .dashboard-card { padding: 24px 16px; }
+  .dashboard-card .btn { width: 100%; justify-content: center; }
+  .welcome-section h2 { font-size: 24px; }
+  .container { padding: 0 12px; }
 }
 
 /* Professional Notes Section */

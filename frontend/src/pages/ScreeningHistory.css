@@ -41,8 +41,12 @@
 .btn-danger:hover:not(:disabled) { box-shadow: 0 6px 18px rgba(239,68,68,0.4); transform: translateY(-1px); }
 .history-footer { text-align: center; margin-top: 20px; }
 @media (max-width: 600px) {
-  .history-container { padding: 24px 16px 60px; }
-  .history-card { flex-direction: column; align-items: flex-start; }
+  .history-content { padding: 20px 12px 60px; }
+  .history-header { flex-direction: column; }
+  .history-header .btn { width: 100%; justify-content: center; }
+  .history-card { flex-direction: column; align-items: flex-start; padding: 16px; }
+  .card-date { min-width: 0; }
   .card-actions { width: 100%; margin-left: 0; }
-  .card-actions .btn { flex: 1; }
+  .card-actions .btn { flex: 1; justify-content: center; }
+  .card-ai { flex-direction: column; align-items: flex-start; }
 }

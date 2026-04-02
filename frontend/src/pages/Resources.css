@@ -43,3 +43,9 @@
 .empty-state { text-align: center; padding: 64px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
 .empty-icon { font-size: 44px; display: block; margin-bottom: 14px; }
 .error-msg { color: var(--error); padding: 24px; text-align: center; }
+
+@media (max-width: 600px) {
+  .resources-grid { grid-template-columns: 1fr; }
+  .resources-header-row { flex-direction: column; }
+  .type-filters { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+}

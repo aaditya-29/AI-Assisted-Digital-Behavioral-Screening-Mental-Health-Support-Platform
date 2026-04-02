@@ -10,6 +10,7 @@ function Consultations() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [expandedIds, setExpandedIds] = useState(new Set())
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -36,6 +37,15 @@ function Consultations() {
       console.error(err)
       alert('Failed to update request')
     }
+  }
+
+  const toggleDetails = (id) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   const handleLogout = async () => { await logout(); navigate('/login') }
@@ -65,46 +75,53 @@ function Consultations() {
                       <span className={`request-status status-${r.status}`}>{r.status}</span>
                     </div>
                     {r.message && <div className="request-msg">"{r.message}"</div>}
-
-                    {/* Patient screening summary */}
-                    <div className="patient-screening-summary">
-                      {r.screening_count > 0 ? (
-                        <>
-                          <div className="screening-summary-row">
-                            <span className="screening-summary-label">Screenings completed:</span>
-                            <span className="screening-summary-value">{r.screening_count}</span>
-                          </div>
-                          {r.last_risk_level && (
-                            <div className="screening-summary-row">
-                              <span className="screening-summary-label">Latest risk level:</span>
-                              <span className={`screening-risk-badge risk-${r.last_risk_level}`}>{r.last_risk_level}</span>
-                            </div>
-                          )}
-                          {r.last_ml_probability_label && (
-                            <div className="screening-summary-row">
-                              <span className="screening-summary-label">ML probability:</span>
-                              <span className={`screening-risk-badge risk-${r.last_ml_probability_label.replace('_', '-')}`}>{r.last_ml_probability_label.replace('_', ' ')}</span>
-                            </div>
-                          )}
-                          {r.last_raw_score !== null && r.last_raw_score !== undefined && (
-                            <div className="screening-summary-row">
-                              <span className="screening-summary-label">AQ-10 score:</span>
-                              <span className="screening-summary-value">{r.last_raw_score} / 10</span>
-                            </div>
-                          )}
-                          {r.last_screening_date && (
-                            <div className="screening-summary-row">
-                              <span className="screening-summary-label">Last screened:</span>
-                              <span className="screening-summary-value">{formatDateTimeIST(r.last_screening_date)}</span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="screening-none-msg">No screenings completed yet</div>
-                      )}
-                    </div>
-
                     <div className="request-date">Requested: {formatDateTimeIST(r.created_at)}</div>
+
+                    {/* View Details toggle */}
+                    <button className="btn-view-details" onClick={() => toggleDetails(r.id)}>
+                      {expandedIds.has(r.id) ? '▾ Hide Details' : '▸ View Details'}
+                    </button>
+
+                    {/* Patient screening summary (shown on expand) */}
+                    {expandedIds.has(r.id) && (
+                      <div className="patient-screening-summary">
+                        {r.screening_count > 0 ? (
+                          <>
+                            <div className="screening-summary-row">
+                              <span className="screening-summary-label">Screenings completed:</span>
+                              <span className="screening-summary-value">{r.screening_count}</span>
+                            </div>
+                            {r.last_risk_level && (
+                              <div className="screening-summary-row">
+                                <span className="screening-summary-label">Latest risk level:</span>
+                                <span className={`screening-risk-badge risk-${r.last_risk_level}`}>{r.last_risk_level}</span>
+                              </div>
+                            )}
+                            {r.last_ml_probability_label && (
+                              <div className="screening-summary-row">
+                                <span className="screening-summary-label">ML probability:</span>
+                                <span className={`screening-risk-badge risk-${r.last_ml_probability_label.replace('_', '-')}`}>{r.last_ml_probability_label.replace('_', ' ')}</span>
+                              </div>
+                            )}
+                            {r.last_raw_score !== null && r.last_raw_score !== undefined && (
+                              <div className="screening-summary-row">
+                                <span className="screening-summary-label">AQ-10 score:</span>
+                                <span className="screening-summary-value">{r.last_raw_score} / 10</span>
+                              </div>
+                            )}
+                            {r.last_screening_date && (
+                              <div className="screening-summary-row">
+                                <span className="screening-summary-label">Last screened:</span>
+                                <span className="screening-summary-value">{formatDateTimeIST(r.last_screening_date)}</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="screening-none-msg">No screenings completed yet</div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="request-actions">
                       {r.status === 'pending' && (
                         <>

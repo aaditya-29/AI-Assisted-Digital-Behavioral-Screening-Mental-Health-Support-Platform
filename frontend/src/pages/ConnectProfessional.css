@@ -23,3 +23,16 @@
 .request-panel textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-family: inherit; font-size: 14px; resize: vertical; min-height: 100px; outline: none; transition: all var(--transition-fast); }
 .request-panel textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
 .request-actions { display: flex; gap: 10px; margin-top: 14px; justify-content: flex-end; }
+
+@media (max-width: 600px) {
+  .connect-container { padding: 20px 12px 60px; }
+  .connect-header h2 { font-size: 22px; }
+  .search-form { flex-direction: column; }
+  .search-form .btn { width: 100%; }
+  .professional-item { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+  .prof-actions { width: 100%; }
+  .prof-actions .btn { width: 100%; justify-content: center; }
+  .request-panel { padding: 20px 16px; }
+  .request-actions { flex-direction: column; }
+  .request-actions .btn { width: 100%; }
+}

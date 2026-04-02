@@ -1,9 +1,6 @@
 /* Consultations Page */
 .consultations-page { min-height: 100vh; background: var(--bg); }
-.page-content { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; animation: fadeInUp 0.4s ease both; }
-.page-title { font-size: 26px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; margin-bottom: 6px; }
-.page-subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; }
-.section-card { background: var(--surface); border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; }
+.consultations-page .page-content { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; animation: fadeInUp 0.4s ease both; }
 .request-list { display: flex; flex-direction: column; gap: 12px; }
 .request-card { background: var(--bg); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 18px; transition: all var(--transition); }
 .request-card:hover { box-shadow: var(--shadow-md); }
@@ -13,15 +10,19 @@
 .status-pending { background: var(--warning-bg); color: #92400e; border: 1px solid var(--warning-border); }
 .status-accepted { background: var(--success-bg); color: #065f46; border: 1px solid var(--success-border); }
 .status-declined { background: #f1f5f9; color: #475569; border: 1px solid var(--border); }
-.request-msg { font-size: 14px; color: var(--text-secondary); margin-bottom: 6px; line-height: 1.6; }
-.request-date { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+.request-msg { font-size: 14px; color: var(--text-secondary); margin-bottom: 6px; line-height: 1.6; font-style: italic; }
+.request-date { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
 .request-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .empty-msg { text-align: center; padding: 40px; color: var(--text-muted); font-size: 15px; }
 .page-loader { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
 
+/* View Details toggle button */
+.btn-view-details { background: none; border: none; color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 0; margin-bottom: 8px; font-family: inherit; transition: color 0.15s; display: inline-block; }
+.btn-view-details:hover { color: var(--primary-dark); text-decoration: underline; }
+
 /* Patient screening summary inside request card */
-.patient-screening-summary { background: var(--bg-secondary, #f8f9ff); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
-.screening-summary-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.patient-screening-summary { background: var(--bg-secondary, #f8f9ff); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; animation: fadeInUp 0.2s ease both; }
+.screening-summary-row { display: flex; align-items: center; gap: 8px; font-size: 13px; flex-wrap: wrap; }
 .screening-summary-label { color: var(--text-secondary); font-weight: 600; min-width: 160px; }
 .screening-summary-value { color: var(--text-primary); font-weight: 700; }
 .screening-none-msg { font-size: 13px; color: var(--text-muted); font-style: italic; }
@@ -30,3 +31,18 @@
 .risk-moderate { background: var(--warning-bg); color: #92400e; border: 1px solid var(--warning-border); }
 .risk-high { background: var(--error-bg); color: #991b1b; border: 1px solid var(--error-border); }
 .risk-very-high { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
+
+/* Accept/Decline buttons */
+.btn-accept { display: inline-flex; align-items: center; gap: 4px; padding: 7px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 700; border: none; cursor: pointer; background: var(--success-bg); color: #065f46; border: 1px solid var(--success-border); transition: all 0.15s; font-family: inherit; }
+.btn-accept:hover { background: #a7f3d0; }
+.btn-reject { display: inline-flex; align-items: center; gap: 4px; padding: 7px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 700; border: none; cursor: pointer; background: var(--error-bg); color: #991b1b; border: 1px solid var(--error-border); transition: all 0.15s; font-family: inherit; }
+.btn-reject:hover { background: #fca5a5; }
+
+@media (max-width: 600px) {
+  .consultations-page .page-content { padding: 20px 12px 60px; }
+  .request-card { padding: 14px; }
+  .screening-summary-label { min-width: 0; width: 100%; }
+  .screening-summary-row { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .request-actions { flex-direction: column; }
+  .request-actions .btn, .btn-accept, .btn-reject { width: 100%; justify-content: center; }
+}
