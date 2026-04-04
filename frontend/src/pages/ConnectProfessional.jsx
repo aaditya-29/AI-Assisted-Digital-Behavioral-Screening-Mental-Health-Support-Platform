@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../services/api'
 import { useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
+import Modal from '../components/Modal'
 import './ConnectProfessional.css'
 
 function ConnectProfessional() {
@@ -12,6 +13,7 @@ function ConnectProfessional() {
   const [selected, setSelected] = useState(null)
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [modalState, setModalState] = useState(null)
   const navigate = useNavigate()
 
   const fetchProfessionals = async (q = '') => {
@@ -38,17 +40,34 @@ function ConnectProfessional() {
     setMessage('')
   }
 
+  const closeModal = () => {
+    if (!modalState) return
+    const callback = modalState.onCloseComplete
+    setModalState(null)
+    if (callback) callback()
+  }
+
   const sendRequest = async () => {
     if (!selected) return
     setSending(true)
     try {
       await api.post('/users/share', { professional_id: selected.user_id, message })
-      alert('Request sent — professional will be notified')
-      setSelected(null)
-      fetchProfessionals()
-      navigate('/dashboard')
+      setModalState({
+        title: 'Request sent',
+        message: 'Your request has been sent. The professional will be notified.',
+        primaryAction: { label: 'Close', onClick: closeModal },
+        onCloseComplete: () => {
+          setSelected(null)
+          fetchProfessionals()
+          navigate('/dashboard')
+        }
+      })
     } catch (err) {
-      alert(err?.response?.data?.detail || 'Failed to send request')
+      setModalState({
+        title: 'Request failed',
+        message: err?.response?.data?.detail || 'Failed to send request',
+        primaryAction: { label: 'Close', onClick: closeModal }
+      })
     } finally {
       setSending(false)
     }
@@ -98,6 +117,15 @@ function ConnectProfessional() {
           </div>
         )}
       </div>
+      {modalState && (
+        <Modal
+          open={!!modalState}
+          title={modalState.title}
+          message={modalState.message}
+          onClose={closeModal}
+          primaryAction={modalState.primaryAction}
+        />
+      )}
     </div>
   )
 }

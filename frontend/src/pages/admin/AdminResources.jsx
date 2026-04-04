@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import NavBar from '../../components/NavBar'
+import Modal from '../../components/Modal'
 import './AdminResources.css'
 
 const EMPTY_FORM = { title: '', type: 'article', target_risk_level: '', description: '', content_or_url: '' }
@@ -17,6 +18,7 @@ export default function AdminResources() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState(null)
+  const [modalState, setModalState] = useState(null)
 
   const { logout } = useAuth()
   const navigate = useNavigate()
@@ -66,19 +68,55 @@ export default function AdminResources() {
     }
   }
 
-  const deleteResource = async (id) => {
-    if (!confirm('Delete this resource?')) return
-    try { await api.delete(`/admin/resources/${id}`); fetchResources() }
-    catch { alert('Failed to delete resource') }
+  const closeModal = () => setModalState(null)
+
+  const showMessageModal = ({ title, message }) => {
+    setModalState({
+      title,
+      message,
+      primaryAction: { label: 'Close', onClick: closeModal }
+    })
   }
 
-  const verifyApplicant = async (userId, firstName, lastName) => {
-    if (!confirm(`Verify ${firstName} ${lastName} as a professional?`)) return
-    try {
-      await api.patch(`/admin/professionals/${userId}/verify`, { is_verified: true })
-      fetchApplications()
-      alert(`${firstName} ${lastName} is now verified as a professional.`)
-    } catch { alert('Failed to verify') }
+  const deleteResource = (id) => {
+    setModalState({
+      title: 'Delete resource',
+      message: 'Delete this resource? This cannot be undone.',
+      primaryAction: {
+        label: 'Delete',
+        onClick: async () => {
+          closeModal()
+          try {
+            await api.delete(`/admin/resources/${id}`)
+            fetchResources()
+          } catch (err) {
+            showMessageModal({ title: 'Delete failed', message: 'Failed to delete resource.' })
+          }
+        }
+      },
+      secondaryAction: { label: 'Cancel', onClick: closeModal }
+    })
+  }
+
+  const verifyApplicant = (userId, firstName, lastName) => {
+    setModalState({
+      title: 'Verify professional',
+      message: `Verify ${firstName} ${lastName} as a professional?`,
+      primaryAction: {
+        label: 'Verify',
+        onClick: async () => {
+          closeModal()
+          try {
+            await api.patch(`/admin/professionals/${userId}/verify`, { is_verified: true })
+            fetchApplications()
+            showMessageModal({ title: 'Verified', message: `${firstName} ${lastName} is now verified as a professional.` })
+          } catch (err) {
+            showMessageModal({ title: 'Verification failed', message: 'Failed to verify professional.' })
+          }
+        }
+      },
+      secondaryAction: { label: 'Cancel', onClick: closeModal }
+    })
   }
 
   const handleLogout = async () => { await logout(); navigate('/login') }
@@ -202,6 +240,16 @@ export default function AdminResources() {
           )}
         </div>
       </div>
+      {modalState && (
+        <Modal
+          open={!!modalState}
+          title={modalState.title}
+          message={modalState.message}
+          onClose={closeModal}
+          primaryAction={modalState.primaryAction}
+          secondaryAction={modalState.secondaryAction}
+        />
+      )}
     </div>
   )
 }

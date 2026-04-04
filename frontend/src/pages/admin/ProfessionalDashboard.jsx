@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from "../../services/api"
 import NavBar from "../../components/NavBar"
+import Modal from '../../components/Modal'
 import "./ProfessionalDashboard.css"
 
 function ProfessionalDashboard() {
@@ -11,6 +12,7 @@ function ProfessionalDashboard() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [modalState, setModalState] = useState(null)
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -95,25 +97,28 @@ function ProfessionalDashboard() {
         {/* Pending Requests */}
         <div className="section-card">
           <h2>Pending Consultation Requests</h2>
-          {requests.length > 0 ? requests.map(req => (
-            <div key={req.id} className="request-card">
-              <div className="request-header">
-                <span className="request-user">User #{req.user_id}</span>
+          {requests.length > 0 ? requests.map(req => {
+            const patientName = [req.first_name, req.last_name].filter(Boolean).join(' ')
+            return (
+              <div key={req.id} className="request-card">
+                <div className="request-header">
+                  <span className="request-user">{patientName || `User #${req.user_id}`}</span>
+                </div>
+                <p className="request-msg">{req.message || 'No message provided'}</p>
+                <p className="request-date">Requested: {new Date(req.created_at).toLocaleString()}</p>
+                <div className="request-btn-group">
+                  <button className="btn-accept" onClick={async () => {
+                    try { await api.patch(`/professional/consultations/${req.id}`, { status: 'accepted' }); fetchProfessionalData() }
+                    catch (err) { setModalState({ title: 'Action failed', message: 'Failed to accept the request.', primaryAction: { label: 'Close', onClick: () => setModalState(null) } }) }
+                  }}>Accept</button>
+                  <button className="btn-reject" onClick={async () => {
+                    try { await api.patch(`/professional/consultations/${req.id}`, { status: 'declined' }); fetchProfessionalData() }
+                    catch (err) { setModalState({ title: 'Action failed', message: 'Failed to decline the request.', primaryAction: { label: 'Close', onClick: () => setModalState(null) } }) }
+                  }}>Decline</button>
+                </div>
               </div>
-              <p className="request-msg">{req.message || 'No message provided'}</p>
-              <p className="request-date">Requested: {new Date(req.created_at).toLocaleString()}</p>
-              <div className="request-btn-group">
-                <button className="btn-accept" onClick={async () => {
-                  try { await api.patch(`/professional/consultations/${req.id}`, { status: 'accepted' }); fetchProfessionalData() }
-                  catch (err) { alert('Failed to accept') }
-                }}>Accept</button>
-                <button className="btn-reject" onClick={async () => {
-                  try { await api.patch(`/professional/consultations/${req.id}`, { status: 'declined' }); fetchProfessionalData() }
-                  catch (err) { alert('Failed to decline') }
-                }}>Decline</button>
-              </div>
-            </div>
-          )) : (
+            )
+          }) : (
             <p className="empty-msg">No pending requests.</p>
           )}
         </div>
@@ -127,6 +132,15 @@ function ProfessionalDashboard() {
           </div>
         </div>
       </div>
+      {modalState && (
+        <Modal
+          open={!!modalState}
+          title={modalState.title}
+          message={modalState.message}
+          onClose={() => setModalState(null)}
+          primaryAction={modalState.primaryAction}
+        />
+      )}
     </div>
   )
 }

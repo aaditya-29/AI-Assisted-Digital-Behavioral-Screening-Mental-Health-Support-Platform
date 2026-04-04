@@ -3,6 +3,7 @@ import api from '../../services/api'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import NavBar from '../../components/NavBar'
+import Modal from '../../components/Modal'
 import './Consultations.css'
 import { formatDateTimeIST } from '../../utils/formatDate'
 
@@ -11,6 +12,7 @@ function Consultations() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expandedIds, setExpandedIds] = useState(new Set())
+  const [modalState, setModalState] = useState(null)
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -32,10 +34,19 @@ function Consultations() {
   const updateStatus = async (id, status) => {
     try {
       await api.patch(`/professional/consultations/${id}`, { status })
+      setModalState({
+        title: 'Request updated',
+        message: `Request has been ${status}.`,
+        primaryAction: { label: 'Close', onClick: () => setModalState(null) }
+      })
       fetchRequests()
     } catch (err) {
       console.error(err)
-      alert('Failed to update request')
+      setModalState({
+        title: 'Update failed',
+        message: 'Failed to update request',
+        primaryAction: { label: 'Close', onClick: () => setModalState(null) }
+      })
     }
   }
 
@@ -138,6 +149,15 @@ function Consultations() {
           </div>
         )}
       </div>
+      {modalState && (
+        <Modal
+          open={!!modalState}
+          title={modalState.title}
+          message={modalState.message}
+          onClose={() => setModalState(null)}
+          primaryAction={modalState.primaryAction}
+        />
+      )}
     </div>
   )
 }
