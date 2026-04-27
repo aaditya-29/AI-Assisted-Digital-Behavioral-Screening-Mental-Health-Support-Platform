@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import NavBar from '../../components/NavBar'
+import Modal from '../../components/Modal'
 import './PatientDetail.css'
 
 const EMPTY_RESOURCE = { title: '', type: 'article', description: '', content_or_url: '' }
@@ -13,6 +14,7 @@ export default function PatientDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [note, setNote] = useState('')
+  const [modal, setModal] = useState({ open: false, title: '', message: '', onClose: () => setModal({ ...modal, open: false }) })
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -22,6 +24,14 @@ export default function PatientDetail() {
   const [resourceForm, setResourceForm] = useState(EMPTY_RESOURCE)
   const [resourceSubmitting, setResourceSubmitting] = useState(false)
   const [resourceError, setResourceError] = useState(null)
+
+  // Global resources browse & recommend
+  const [globalResources, setGlobalResources] = useState([])
+  const [showGlobalResources, setShowGlobalResources] = useState(false)
+  const [globalResourcesLoading, setGlobalResourcesLoading] = useState(false)
+  const [recommendingId, setRecommendingId] = useState(null)
+  const [recommendedIds, setRecommendedIds] = useState(new Set())
+  const [globalFilter, setGlobalFilter] = useState('')
 
   // Journal state
   const [journals, setJournals] = useState([])
@@ -38,7 +48,14 @@ export default function PatientDetail() {
   const [taskAnalytics, setTaskAnalytics] = useState(null)
   const [taskAnalyticsLoading, setTaskAnalyticsLoading] = useState(false)
 
-  useEffect(() => { fetchDetail(); fetchPatientResources(); fetchTaskAnalytics() }, [id])
+  // AI Recommendations state
+  const [patientRecs, setPatientRecs] = useState(null)
+  const [recsLoading, setRecsLoading] = useState(false)
+  const [dismissingRecId, setDismissingRecId] = useState(null)
+  const [dismissComment, setDismissComment] = useState('')
+  const [showDismissModal, setShowDismissModal] = useState(null) // rec id or null
+
+  useEffect(() => { fetchDetail(); fetchPatientResources(); fetchTaskAnalytics(); fetchPatientRecs() }, [id])
 
   const fetchDetail = async () => {
     try {
@@ -71,6 +88,35 @@ export default function PatientDetail() {
       console.error('Failed to load task analytics', err)
     } finally {
       setTaskAnalyticsLoading(false)
+    }
+  }
+
+  const fetchPatientRecs = async () => {
+    try {
+      setRecsLoading(true)
+      const res = await api.get(`/professional/patients/${id}/recommendations`)
+      setPatientRecs(res.data)
+    } catch (err) {
+      console.error('Failed to load patient recommendations', err)
+    } finally {
+      setRecsLoading(false)
+    }
+  }
+
+  const handleDismissRec = async (recId) => {
+    if (!dismissComment.trim()) return
+    setDismissingRecId(recId)
+    try {
+      await api.patch(`/professional/patients/${id}/recommendations/${recId}/dismiss`, {
+        comment: dismissComment.trim()
+      })
+      setShowDismissModal(null)
+      setDismissComment('')
+      fetchPatientRecs()
+    } catch (err) {
+      setModal({ open: true, title: 'Error', message: err?.response?.data?.detail || 'Failed to dismiss recommendation', onClose: () => setModal({ ...modal, open: false }) })
+    } finally {
+      setDismissingRecId(null)
     }
   }
 
@@ -130,7 +176,7 @@ export default function PatientDetail() {
       fetchDetail()
     } catch (err) {
       console.error(err)
-      alert('Failed to add note')
+      setModal({ open: true, title: 'Error', message: 'Failed to add note', onClose: () => setModal({ ...modal, open: false }) })
     }
   }
 
@@ -152,11 +198,64 @@ export default function PatientDetail() {
   }
 
   const deleteResource = async (resourceId) => {
-    if (!confirm('Delete this resource?')) return
+    setModal({
+      open: true,
+      title: 'Confirm Delete',
+      message: 'Delete this resource?',
+      onClose: () => setModal({ ...modal, open: false }),
+      primaryAction: {
+        label: 'Delete',
+        onClick: async () => {
+          setModal({ ...modal, open: false })
+          try {
+            await api.delete(`/resources/${resourceId}`)
+            fetchPatientResources()
+          } catch {
+            setModal({ open: true, title: 'Error', message: 'Failed to delete resource', onClose: () => setModal({ ...modal, open: false }) })
+          }
+        }
+      },
+      secondaryAction: {
+        label: 'Cancel',
+        onClick: () => setModal({ ...modal, open: false })
+      }
+    })
+  }
+
+  const fetchGlobalResources = async () => {
+    if (globalResources.length > 0) return // already loaded
+    setGlobalResourcesLoading(true)
     try {
-      await api.delete(`/resources/${resourceId}`)
-      fetchPatientResources()
-    } catch { alert('Failed to delete resource') }
+      const res = await api.get('/resources/global')
+      setGlobalResources(res.data || [])
+    } catch (err) {
+      console.error('Failed to load global resources', err)
+    } finally {
+      setGlobalResourcesLoading(false)
+    }
+  }
+
+  const handleToggleGlobalResources = () => {
+    if (!showGlobalResources) fetchGlobalResources()
+    setShowGlobalResources(v => !v)
+  }
+
+  const recommendResource = async (resourceId) => {
+    setRecommendingId(resourceId)
+    try {
+      await api.post(`/resources/recommend/${id}/${resourceId}`)
+      setRecommendedIds(prev => new Set([...prev, resourceId]))
+    } catch (err) {
+      const detail = err?.response?.data?.detail || 'Failed to recommend resource'
+      if (err?.response?.status === 409) {
+        // Already recommended — mark it locally
+        setRecommendedIds(prev => new Set([...prev, resourceId]))
+      } else {
+        setModal({ open: true, title: 'Error', message: detail, onClose: () => setModal({ ...modal, open: false }) })
+      }
+    } finally {
+      setRecommendingId(null)
+    }
   }
 
   const moodEmoji = (score) => {
@@ -183,11 +282,12 @@ export default function PatientDetail() {
   )
 
   return (
-    <div className="patient-detail-page">
-      <NavBar />
+    <>
+      <div className="patient-detail-page">
+        <NavBar />
 
-      <div className="page-content">
-        <Link to="/professional/patients" className="back-link">← Back to Patients</Link>
+        <div className="page-content">
+          <Link to="/professional/patients" className="back-link">← Back to Patients</Link>
 
         <div className="patient-header">
           <div className="patient-header-avatar">{(patient.first_name?.[0] || '?').toUpperCase()}</div>
@@ -197,21 +297,156 @@ export default function PatientDetail() {
           </div>
         </div>
 
-        <div className="section-card">
-          <h2>Latest Analysis</h2>
-          {patient.latest_analysis ? (
-            <div className="analysis-row">
-              <div className="analysis-item">
-                <span className="analysis-label">Composite Score</span>
-                <span className="analysis-value">{patient.latest_analysis.composite_score}</span>
-              </div>
-              <div className="analysis-item">
-                <span className="analysis-label">Trend</span>
-                <span className="analysis-value">{patient.latest_analysis.trend_direction}</span>
+        {/* ── Patient Overview ── */}
+        {(() => {
+          const latestS = patient.screenings?.[0]
+          const totalScreenings = patient.screenings?.length || 0
+          const riskColors = { low: '#10b981', moderate: '#f59e0b', high: '#ef4444' }
+          const riskBg    = { low: '#dcfce7', moderate: '#fef3c7', high: '#fee2e2' }
+          const mlLabels  = { low: 'Low Likelihood', moderate: 'Moderate Likelihood', high: 'High Likelihood', very_high: 'Very High Likelihood' }
+          const mlColors  = { low: '#10b981', moderate: '#f59e0b', high: '#f97316', very_high: '#ef4444' }
+          return (
+            <div className="section-card">
+              <h2>Patient Overview</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
+                {/* Screenings count */}
+                <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Screenings</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{totalScreenings}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>completed</div>
+                </div>
+                {/* Latest risk */}
+                {latestS && (
+                  <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Latest Risk</div>
+                    <span style={{
+                      display: 'inline-block', fontSize: 13, fontWeight: 800, padding: '4px 12px', borderRadius: 20,
+                      background: riskBg[latestS.risk_level] || '#f1f5f9',
+                      color: riskColors[latestS.risk_level] || '#64748b',
+                    }}>
+                      {latestS.risk_level ? latestS.risk_level.charAt(0).toUpperCase() + latestS.risk_level.slice(1) : '—'}
+                    </span>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Score: {latestS.raw_score ?? '—'}/10</div>
+                  </div>
+                )}
+                {/* ML assessment */}
+                {latestS?.ml_probability_label && (
+                  <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>AI Assessment</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: mlColors[latestS.ml_probability_label] || '#64748b' }}>
+                      {mlLabels[latestS.ml_probability_label] || latestS.ml_probability_label}
+                    </div>
+                    {latestS.ml_probability != null && (
+                      <div style={{ marginTop: 8, height: 6, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.round(latestS.ml_probability * 100)}%`, background: mlColors[latestS.ml_probability_label] || '#6366f1', borderRadius: 4 }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Last active */}
+                {latestS && (
+                  <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Last Screening</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {new Date(latestS.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                      {latestS.age_group_used ? `Age group: ${latestS.age_group_used}` : 'No age group recorded'}
+                    </div>
+                  </div>
+                )}
+                {/* Task sessions */}
+                {taskAnalytics && taskAnalytics.total_sessions > 0 && (
+                  <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Task Sessions</div>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{taskAnalytics.total_sessions}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>across {Object.keys(taskAnalytics.pillar_analytics || {}).length} pillars</div>
+                  </div>
+                )}
+                {/* No data state */}
+                {totalScreenings === 0 && (
+                  <div style={{ gridColumn: '1 / -1', color: 'var(--text-muted)', fontSize: 14 }}>No data available yet. The patient hasn't completed any screenings.</div>
+                )}
               </div>
             </div>
-          ) : (
-            <p style={{ color: 'var(--text-muted)' }}>No analysis available yet.</p>
+          )
+        })()}
+
+        {/* ── AI Recommendations ── */}
+        <div className="section-card">
+          <h2>AI Recommendations</h2>
+          {recsLoading && (
+            <div style={{ padding: 20, textAlign: 'center' }}>
+              <div className="spinner" style={{ margin: '0 auto' }}></div>
+            </div>
+          )}
+          {!recsLoading && (!patientRecs || patientRecs.recommendations?.length === 0) && (
+            <p style={{ color: 'var(--text-muted)' }}>No AI recommendations for this patient yet.</p>
+          )}
+          {!recsLoading && patientRecs && patientRecs.recommendations?.length > 0 && (
+            <>
+              {patientRecs.summary && (
+                <div style={{ background: 'var(--bg)', borderRadius: 12, padding: 16, marginBottom: 16, border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>AI Summary</div>
+                  <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, color: 'var(--text-primary)' }}>{patientRecs.summary}</p>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {patientRecs.recommendations.map(r => {
+                  const catMatch = r.reason.match(/^\[(\w+)\]\s*(.*)/)
+                  const category = catMatch?.[1] || null
+                  const reason = catMatch?.[2] || r.reason
+                  const isResource = category === 'resource'
+                  const statusColors = { pending: '#f59e0b', completed: '#10b981', dismissed: '#94a3b8' }
+                  const statusBg = { pending: '#fef3c7', completed: '#dcfce7', dismissed: '#f1f5f9' }
+
+                  return (
+                    <div key={r.id} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 12,
+                      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+                      padding: 14, opacity: r.status === 'dismissed' ? 0.6 : 1,
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                          {category && (
+                            <span style={{
+                              fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+                              background: isResource ? '#e0e7ff' : 'rgba(99,102,241,0.1)', color: isResource ? '#4f46e5' : 'var(--primary)',
+                              padding: '2px 8px', borderRadius: 20,
+                            }}>
+                              {isResource ? '📎 Resource' : category.replace(/_/g, ' ')}
+                            </span>
+                          )}
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                            background: statusBg[r.status] || '#f1f5f9',
+                            color: statusColors[r.status] || '#64748b',
+                            padding: '2px 8px', borderRadius: 20,
+                          }}>
+                            {r.status}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 14, lineHeight: 1.5, margin: 0, color: 'var(--text-primary)' }}>{reason}</p>
+                        {r.comment && (
+                          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, fontStyle: 'italic' }}>
+                            💬 {r.comment}
+                          </p>
+                        )}
+                      </div>
+                      {r.status === 'pending' && (
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          style={{ flexShrink: 0, fontSize: 12 }}
+                          onClick={() => { setShowDismissModal(r.id); setDismissComment('') }}
+                        >
+                          Dismiss
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
 
@@ -434,9 +669,14 @@ export default function PatientDetail() {
         <div className="section-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h2 style={{ margin: 0 }}>Patient Resources</h2>
-            <button className="btn btn-sm btn-primary" onClick={() => setShowResourceForm(v => !v)}>
-              {showResourceForm ? 'Cancel' : '+ Upload Resource'}
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-sm btn-secondary" onClick={handleToggleGlobalResources}>
+                {showGlobalResources ? 'Hide Library' : '📚 Browse Library'}
+              </button>
+              <button className="btn btn-sm btn-primary" onClick={() => setShowResourceForm(v => !v)}>
+                {showResourceForm ? 'Cancel' : '+ Upload Resource'}
+              </button>
+            </div>
           </div>
 
           {showResourceForm && (
@@ -470,6 +710,75 @@ export default function PatientDetail() {
                 <button type="submit" className="btn btn-primary btn-sm" disabled={resourceSubmitting}>{resourceSubmitting ? 'Uploading…' : 'Upload'}</button>
               </div>
             </form>
+          )}
+
+          {/* Global Resource Library Panel */}
+          {showGlobalResources && (
+            <div className="global-resource-panel">
+              <div className="global-resource-panel-header">
+                <span style={{ fontWeight: 700, fontSize: 14 }}>Global Resource Library</span>
+                <input
+                  className="global-resource-search"
+                  type="text"
+                  placeholder="Search resources…"
+                  value={globalFilter}
+                  onChange={e => setGlobalFilter(e.target.value)}
+                />
+              </div>
+              {globalResourcesLoading ? (
+                <div style={{ padding: 24, textAlign: 'center' }}>
+                  <div className="spinner" style={{ margin: '0 auto' }}></div>
+                </div>
+              ) : globalResources.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: 14, padding: '12px 0' }}>No global resources available.</p>
+              ) : (
+                <ul className="global-resource-list">
+                  {globalResources
+                    .filter(r =>
+                      !globalFilter ||
+                      r.title.toLowerCase().includes(globalFilter.toLowerCase()) ||
+                      (r.description || '').toLowerCase().includes(globalFilter.toLowerCase()) ||
+                      r.type.toLowerCase().includes(globalFilter.toLowerCase())
+                    )
+                    .map(r => {
+                      const isRecommended = recommendedIds.has(r.id)
+                      const isLoading = recommendingId === r.id
+                      const typeColors = { article: '#6366f1', video: '#f59e0b', exercise: '#10b981', guide: '#3b82f6', tool: '#ec4899' }
+                      return (
+                        <li key={r.id} className="global-resource-item">
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 600, fontSize: 14 }}>{r.title}</span>
+                              <span className="resource-type-badge" style={{ background: typeColors[r.type] || '#6366f1' }}>
+                                {r.type}
+                              </span>
+                              {r.target_risk_level && (
+                                <span className="resource-risk-badge">{r.target_risk_level}</span>
+                              )}
+                            </div>
+                            {r.description && (
+                              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0', lineHeight: 1.4 }}>{r.description}</p>
+                            )}
+                            {r.content_or_url && (
+                              <a href={r.content_or_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--primary)', marginTop: 4, display: 'inline-block' }}>
+                                View resource ↗
+                              </a>
+                            )}
+                          </div>
+                          <button
+                            className={`btn btn-sm ${isRecommended ? 'btn-success-outline' : 'btn-primary'}`}
+                            style={{ flexShrink: 0 }}
+                            onClick={() => !isRecommended && !isLoading && recommendResource(r.id)}
+                            disabled={isRecommended || isLoading}
+                          >
+                            {isLoading ? '…' : isRecommended ? '✓ Sent' : 'Recommend'}
+                          </button>
+                        </li>
+                      )
+                    })}
+                </ul>
+              )}
+            </div>
           )}
 
           {patientResources.length === 0 ? (
@@ -612,7 +921,43 @@ export default function PatientDetail() {
           </div>
         </div>
       )}
+
+      {/* Dismiss Recommendation Modal */}
+      {showDismissModal && (
+        <div className="modal-overlay" onClick={() => setShowDismissModal(null)}>
+          <div className="modal-panel" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Dismiss Recommendation</h3>
+              <button className="modal-close-btn" onClick={() => setShowDismissModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                Please provide a reason for dismissing this recommendation. This will be visible to the patient.
+              </p>
+              <textarea
+                rows={4}
+                value={dismissComment}
+                onChange={e => setDismissComment(e.target.value)}
+                placeholder="e.g. Patient has already shown improvement in this area…"
+                style={{ width: '100%', fontSize: 14, padding: 10, borderRadius: 8, border: '1px solid var(--border)' }}
+              />
+              <div style={{ display: 'flex', gap: 10, marginTop: 14, justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowDismissModal(null)}>Cancel</button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  disabled={!dismissComment.trim() || dismissingRecId === showDismissModal}
+                  onClick={() => handleDismissRec(showDismissModal)}
+                >
+                  {dismissingRecId === showDismissModal ? 'Dismissing…' : 'Dismiss with Comment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    <Modal {...modal} />
+    </>
   )
 }
 

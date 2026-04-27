@@ -9,7 +9,7 @@
  *   IV. Sensory-Perceptual Thresholding & Adaptation
  */
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import taskService from '../services/taskService';
 import {
   NBackTask,
@@ -59,11 +59,19 @@ const DIFFICULTY_LABELS = {
 function TaskPlayer() {
   const { taskId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Read ?level= param — when set we skip the difficulty screen entirely
+  const urlLevel = (() => {
+    const p = new URLSearchParams(location.search);
+    const v = parseInt(p.get('level'), 10);
+    return isNaN(v) ? null : v;
+  })();
 
   const [phase, setPhase] = useState('loading'); // loading, difficulty, instructions, playing, results, error
   const [taskDetail, setTaskDetail] = useState(null);
   const [sessionData, setSessionData] = useState(null);
-  const [selectedDifficulty, setSelectedDifficulty] = useState(1);
+  const [selectedDifficulty, setSelectedDifficulty] = useState(urlLevel || 1);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
 
@@ -77,6 +85,11 @@ function TaskPlayer() {
       setPhase('loading');
       const data = await taskService.getTaskDetail(parseInt(taskId));
       setTaskDetail(data);
+      // If a level was specified in the URL (from AI recommendation), skip difficulty selection
+      if (urlLevel) {
+        await startSession(parseInt(taskId), urlLevel);
+        return;
+      }
       // If task has multiple difficulty levels, show selector; otherwise go to instructions
       const numLevels = data.difficulty_levels ? Object.keys(data.difficulty_levels).length : 0;
       if (numLevels > 1) {

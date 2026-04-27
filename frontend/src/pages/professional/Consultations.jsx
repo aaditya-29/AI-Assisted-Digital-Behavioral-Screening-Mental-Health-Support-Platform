@@ -12,7 +12,7 @@ function Consultations() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expandedIds, setExpandedIds] = useState(new Set())
-  const [modalState, setModalState] = useState(null)
+  const [modal, setModal] = useState({ open: false, title: '', message: '', onClose: () => setModal({ ...modal, open: false }) })
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -34,19 +34,10 @@ function Consultations() {
   const updateStatus = async (id, status) => {
     try {
       await api.patch(`/professional/consultations/${id}`, { status })
-      setModalState({
-        title: 'Request updated',
-        message: `Request has been ${status}.`,
-        primaryAction: { label: 'Close', onClick: () => setModalState(null) }
-      })
       fetchRequests()
     } catch (err) {
       console.error(err)
-      setModalState({
-        title: 'Update failed',
-        message: 'Failed to update request',
-        primaryAction: { label: 'Close', onClick: () => setModalState(null) }
-      })
+      setModal({ open: true, title: 'Error', message: 'Failed to update request', onClose: () => setModal({ ...modal, open: false }) })
     }
   }
 
@@ -149,15 +140,7 @@ function Consultations() {
           </div>
         )}
       </div>
-      {modalState && (
-        <Modal
-          open={!!modalState}
-          title={modalState.title}
-          message={modalState.message}
-          onClose={() => setModalState(null)}
-          primaryAction={modalState.primaryAction}
-        />
-      )}
+      <Modal {...modal} />
     </div>
   )
 }

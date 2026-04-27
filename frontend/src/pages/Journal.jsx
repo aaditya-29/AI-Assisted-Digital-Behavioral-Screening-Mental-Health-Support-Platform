@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import NavBar from '../components/NavBar'
+import Modal from '../components/Modal'
 import api from '../services/api'
 import './Journal.css'
 
@@ -22,6 +23,7 @@ export default function Journal() {
   const formRef = useRef(null)
   const textareaRef = useRef(null)
   const [expandedEntries, setExpandedEntries] = useState({})
+  const [modal, setModal] = useState({ open: false, title: '', message: '', onClose: () => setModal({ ...modal, open: false }) })
 
   useEffect(() => { fetchEntries() }, [])
 
@@ -79,11 +81,28 @@ export default function Journal() {
   }, [showForm])
 
   const deleteEntry = async (id) => {
-    if (!confirm('Delete this journal entry? This cannot be undone.')) return
-    try {
-      await api.delete(`/journal/entries/${id}`)
-      fetchEntries()
-    } catch { alert('Failed to delete entry') }
+    setModal({
+      open: true,
+      title: 'Confirm Delete',
+      message: 'Delete this journal entry? This cannot be undone.',
+      onClose: () => setModal({ ...modal, open: false }),
+      primaryAction: {
+        label: 'Delete',
+        onClick: async () => {
+          setModal({ ...modal, open: false })
+          try {
+            await api.delete(`/journal/entries/${id}`)
+            fetchEntries()
+          } catch {
+            setModal({ open: true, title: 'Error', message: 'Failed to delete entry', onClose: () => setModal({ ...modal, open: false }) })
+          }
+        }
+      },
+      secondaryAction: {
+        label: 'Cancel',
+        onClick: () => setModal({ ...modal, open: false })
+      }
+    })
   }
 
   const cancelForm = () => {
@@ -238,6 +257,7 @@ export default function Journal() {
           </div>
         )}
       </div>
+      <Modal {...modal} />
     </div>
   )
 }

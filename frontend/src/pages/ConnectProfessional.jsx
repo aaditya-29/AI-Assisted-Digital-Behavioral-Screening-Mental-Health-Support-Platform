@@ -13,7 +13,7 @@ function ConnectProfessional() {
   const [selected, setSelected] = useState(null)
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
-  const [modalState, setModalState] = useState(null)
+  const [modal, setModal] = useState({ open: false, title: '', message: '', onClose: () => setModal({ ...modal, open: false }) })
   const navigate = useNavigate()
 
   const fetchProfessionals = async (q = '') => {
@@ -40,33 +40,28 @@ function ConnectProfessional() {
     setMessage('')
   }
 
-  const closeModal = () => {
-    if (!modalState) return
-    const callback = modalState.onCloseComplete
-    setModalState(null)
-    if (callback) callback()
-  }
-
   const sendRequest = async () => {
     if (!selected) return
     setSending(true)
     try {
       await api.post('/users/share', { professional_id: selected.user_id, message })
-      setModalState({
-        title: 'Request sent',
-        message: 'Your request has been sent. The professional will be notified.',
-        primaryAction: { label: 'Close', onClick: closeModal },
-        onCloseComplete: () => {
+      setModal({
+        open: true,
+        title: 'Success',
+        message: 'Request sent — professional will be notified',
+        onClose: () => {
+          setModal({ ...modal, open: false })
           setSelected(null)
           fetchProfessionals()
           navigate('/dashboard')
         }
       })
     } catch (err) {
-      setModalState({
-        title: 'Request failed',
+      setModal({
+        open: true,
+        title: 'Error',
         message: err?.response?.data?.detail || 'Failed to send request',
-        primaryAction: { label: 'Close', onClick: closeModal }
+        onClose: () => setModal({ ...modal, open: false })
       })
     } finally {
       setSending(false)
@@ -117,15 +112,7 @@ function ConnectProfessional() {
           </div>
         )}
       </div>
-      {modalState && (
-        <Modal
-          open={!!modalState}
-          title={modalState.title}
-          message={modalState.message}
-          onClose={closeModal}
-          primaryAction={modalState.primaryAction}
-        />
-      )}
+      <Modal {...modal} />
     </div>
   )
 }

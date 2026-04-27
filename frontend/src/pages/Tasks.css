@@ -29,6 +29,8 @@
 .tasks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; margin-bottom: 12px; }
 .task-card { background: var(--surface); border-radius: var(--radius-xl); border: 1px solid var(--border); border-top: 4px solid; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; padding: 20px; gap: 12px; transition: all var(--transition); animation: fadeInUp 0.35s ease both; }
 .task-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+.task-card--highlighted { border: 2px solid #6366f1; border-top: 4px solid; box-shadow: 0 0 0 4px rgba(99,102,241,0.15), var(--shadow-lg); }
+.recommended-level-banner { background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12)); border: 1px solid rgba(99,102,241,0.3); border-radius: var(--radius-md); padding: 8px 12px; font-size: 13px; color: var(--primary); }
 .task-card-header { display: flex; align-items: center; gap: 12px; }
 .task-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; color: white; }
 .task-title-area h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }

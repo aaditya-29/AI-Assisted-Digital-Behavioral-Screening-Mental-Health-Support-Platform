@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import screeningService from '../services/screeningService'
 import NavBar from '../components/NavBar'
+import Modal from '../components/Modal'
 import './ScreeningHistory.css'
 
 function ScreeningHistory() {
@@ -14,6 +15,7 @@ function ScreeningHistory() {
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [modal, setModal] = useState({ open: false, title: '', message: '', onClose: () => setModal({ ...modal, open: false }) })
 
   useEffect(() => {
     fetchHistory()
@@ -52,15 +54,28 @@ function ScreeningHistory() {
   }
 
   const handleDeleteIncomplete = async (sessionId) => {
-    if (!confirm('Are you sure you want to delete this incomplete screening?')) {
-      return
-    }
-    try {
-      await screeningService.deleteIncomplete(sessionId)
-      fetchHistory()
-    } catch (err) {
-      alert('Failed to delete screening')
-    }
+    setModal({
+      open: true,
+      title: 'Confirm Delete',
+      message: 'Are you sure you want to delete this incomplete screening?',
+      onClose: () => setModal({ ...modal, open: false }),
+      primaryAction: {
+        label: 'Delete',
+        onClick: async () => {
+          setModal({ ...modal, open: false })
+          try {
+            await screeningService.deleteIncomplete(sessionId)
+            fetchHistory()
+          } catch (err) {
+            setModal({ open: true, title: 'Error', message: 'Failed to delete screening', onClose: () => setModal({ ...modal, open: false }) })
+          }
+        }
+      },
+      secondaryAction: {
+        label: 'Cancel',
+        onClick: () => setModal({ ...modal, open: false })
+      }
+    })
   }
 
   if (loading) {
@@ -209,6 +224,7 @@ function ScreeningHistory() {
         </button>
       </div>
       </div>
+      <Modal {...modal} />
     </div>
   )
 }

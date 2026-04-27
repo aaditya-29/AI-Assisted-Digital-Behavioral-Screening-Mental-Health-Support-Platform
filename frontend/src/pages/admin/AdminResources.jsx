@@ -18,7 +18,7 @@ export default function AdminResources() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState(null)
-  const [modalState, setModalState] = useState(null)
+  const [modal, setModal] = useState({ open: false, title: '', message: '', onClose: () => setModal({ ...modal, open: false }) })
 
   const { logout } = useAuth()
   const navigate = useNavigate()
@@ -68,54 +68,69 @@ export default function AdminResources() {
     }
   }
 
-  const closeModal = () => setModalState(null)
-
-  const showMessageModal = ({ title, message }) => {
-    setModalState({
-      title,
-      message,
-      primaryAction: { label: 'Close', onClick: closeModal }
-    })
-  }
-
-  const deleteResource = (id) => {
-    setModalState({
-      title: 'Delete resource',
-      message: 'Delete this resource? This cannot be undone.',
+  const deleteResource = async (id) => {
+    setModal({
+      open: true,
+      title: 'Confirm Delete',
+      message: 'Delete this resource?',
+      onClose: () => setModal({ ...modal, open: false }),
       primaryAction: {
         label: 'Delete',
         onClick: async () => {
-          closeModal()
+          setModal({ ...modal, open: false })
           try {
             await api.delete(`/admin/resources/${id}`)
             fetchResources()
-          } catch (err) {
-            showMessageModal({ title: 'Delete failed', message: 'Failed to delete resource.' })
+          } catch {
+            setModal({
+              open: true,
+              title: 'Error',
+              message: 'Failed to delete resource',
+              onClose: () => setModal({ ...modal, open: false })
+            })
           }
         }
       },
-      secondaryAction: { label: 'Cancel', onClick: closeModal }
+      secondaryAction: {
+        label: 'Cancel',
+        onClick: () => setModal({ ...modal, open: false })
+      }
     })
   }
 
-  const verifyApplicant = (userId, firstName, lastName) => {
-    setModalState({
-      title: 'Verify professional',
+  const verifyApplicant = async (userId, firstName, lastName) => {
+    setModal({
+      open: true,
+      title: 'Confirm Verification',
       message: `Verify ${firstName} ${lastName} as a professional?`,
+      onClose: () => setModal({ ...modal, open: false }),
       primaryAction: {
         label: 'Verify',
         onClick: async () => {
-          closeModal()
+          setModal({ ...modal, open: false })
           try {
             await api.patch(`/admin/professionals/${userId}/verify`, { is_verified: true })
             fetchApplications()
-            showMessageModal({ title: 'Verified', message: `${firstName} ${lastName} is now verified as a professional.` })
-          } catch (err) {
-            showMessageModal({ title: 'Verification failed', message: 'Failed to verify professional.' })
+            setModal({
+              open: true,
+              title: 'Success',
+              message: `${firstName} ${lastName} is now verified as a professional.`,
+              onClose: () => setModal({ ...modal, open: false })
+            })
+          } catch {
+            setModal({
+              open: true,
+              title: 'Error',
+              message: 'Failed to verify',
+              onClose: () => setModal({ ...modal, open: false })
+            })
           }
         }
       },
-      secondaryAction: { label: 'Cancel', onClick: closeModal }
+      secondaryAction: {
+        label: 'Cancel',
+        onClick: () => setModal({ ...modal, open: false })
+      }
     })
   }
 
@@ -240,16 +255,7 @@ export default function AdminResources() {
           )}
         </div>
       </div>
-      {modalState && (
-        <Modal
-          open={!!modalState}
-          title={modalState.title}
-          message={modalState.message}
-          onClose={closeModal}
-          primaryAction={modalState.primaryAction}
-          secondaryAction={modalState.secondaryAction}
-        />
-      )}
+      <Modal {...modal} />
     </div>
   )
 }

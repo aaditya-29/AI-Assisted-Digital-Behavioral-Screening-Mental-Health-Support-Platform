@@ -75,6 +75,24 @@
 .response-detail-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
 .response-detail-q { margin-bottom: 0; }
 
+/* Global Resource Library Panel */
+.global-resource-panel { background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 20px; }
+.global-resource-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.global-resource-search { flex: 1; min-width: 160px; max-width: 280px; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 7px 11px; font-size: 13px; background: var(--surface); color: var(--text-primary); outline: none; font-family: inherit; transition: border-color 0.15s; }
+.global-resource-search:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+.global-resource-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; max-height: 380px; overflow-y: auto; }
+.global-resource-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 11px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); transition: box-shadow 0.15s; }
+.global-resource-item:hover { box-shadow: var(--shadow-sm); }
+.resource-type-badge { font-size: 11px; font-weight: 700; color: white; padding: 2px 8px; border-radius: 999px; text-transform: capitalize; flex-shrink: 0; }
+.resource-risk-badge { font-size: 11px; font-weight: 600; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px; text-transform: capitalize; flex-shrink: 0; }
+.btn-success-outline { background: transparent; border: 1.5px solid #22c55e; color: #16a34a; cursor: default; }
+.btn-success-outline:hover { background: transparent; }
+
+@media (max-width: 600px) {
+  .global-resource-panel-header { flex-direction: column; align-items: flex-start; }
+  .global-resource-search { max-width: 100%; width: 100%; }
+}
+
 @media (max-width: 900px) {
 	.ai-prob-row { width: 100%; max-width: none; }
 	.ai-prob-meta { align-items: flex-start; }

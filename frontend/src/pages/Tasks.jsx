@@ -4,7 +4,7 @@
  * Displays behavioral tasks organized by clinical intervention pillars.
  */
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import taskService from '../services/taskService';
 import NavBar from '../components/NavBar';
 import './Tasks.css';
@@ -57,16 +57,44 @@ const PARADIGM_ICONS = {
 
 function Tasks() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [tasks, setTasks] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPillar, setSelectedPillar] = useState(null);
+  const [highlightedCategory, setHighlightedCategory] = useState(null);
+  const [recommendedLevel, setRecommendedLevel] = useState(null);
 
   useEffect(() => {
     loadTasks();
     loadStats();
   }, []);
+
+  // Handle ?category=X&level=Y URL params from recommendation links.
+  // Once tasks are loaded, resolve the category to a task ID and navigate
+  // directly to the play page, bypassing the Tasks listing entirely.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const cat = params.get('category');
+    const lvl = params.get('level');
+    if (cat) {
+      setHighlightedCategory(cat);
+      setRecommendedLevel(lvl ? parseInt(lvl, 10) : null);
+    }
+  }, [location.search]);
+
+  // Auto-navigate once tasks are loaded and a category param is present
+  useEffect(() => {
+    if (!highlightedCategory || loading || tasks.length === 0) return;
+    const match = tasks.find(t => t.category === highlightedCategory);
+    if (match) {
+      const level = recommendedLevel || null;
+      const url = level ? `/tasks/${match.id}/play?level=${level}` : `/tasks/${match.id}/play`;
+      navigate(url, { replace: true });
+    }
+    // If no match found, fall through to show the Tasks page normally
+  }, [highlightedCategory, loading, tasks]);
 
   const loadTasks = async () => {
     try {

@@ -16,6 +16,7 @@ export default function NavBar() {
   const [counts, setCounts] = useState({ total_unread: 0, consultation_requests: 0, notes: 0, journals: 0, resources: 0, other: 0 })
   const [notifications, setNotifications] = useState([])
   const [showPanel, setShowPanel] = useState(false)
+  const [badgeCleared, setBadgeCleared] = useState(false) // Facebook-style: visually clear on open
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const panelRef = useRef(null)
   const hamburgerRef = useRef(null)
@@ -41,11 +42,15 @@ export default function NavBar() {
     try {
       const res = await api.get('/notifications/counts')
       setCounts(res.data)
+      // Only re-show the badge if there are new unread since we last cleared
+      setBadgeCleared(false)
     } catch { /* silent */ }
   }
 
   const togglePanel = async () => {
     if (!showPanel) {
+      // Facebook-style: visually clear the count the moment panel opens
+      setBadgeCleared(true)
       try {
         const res = await api.get('/notifications/?limit=20')
         setNotifications(res.data || [])
@@ -155,7 +160,9 @@ export default function NavBar() {
           <div className="notif-wrapper" ref={panelRef}>
             <button className="notif-bell" onClick={togglePanel} title="Notifications">
               🔔
-              {counts.total_unread > 0 && <span className="notif-count pulse">{counts.total_unread}</span>}
+              {counts.total_unread > 0 && !badgeCleared && (
+                <span className="notif-count pulse">{counts.total_unread}</span>
+              )}
             </button>
 
             {showPanel && (
