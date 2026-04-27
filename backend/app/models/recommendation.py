@@ -50,7 +50,10 @@ class Recommendation(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     resource_id = Column(Integer, ForeignKey("resources.id", ondelete="SET NULL"), nullable=True, index=True)
     analysis_snapshot_id = Column(Integer, ForeignKey("user_analysis_snapshots.id", ondelete="SET NULL"), nullable=True, index=True)
+    batch_id = Column(String(36), nullable=True, index=True)  # UUID grouping recs from same analysis
     reason = Column(Text, nullable=True)
+    redirect_link = Column(Text, nullable=True)
+    comment = Column(Text, nullable=True)  # Dismissal reason / professional note
     status = Column(SQLEnum(RecommendationStatus), default=RecommendationStatus.PENDING, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

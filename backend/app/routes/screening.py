@@ -4,7 +4,7 @@ Screening Routes
 API endpoints for AQ-10 screening questionnaire.
 """
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -33,6 +33,7 @@ from app.services.screening_service import (
     AQ10_MAX_SCORE
 )
 from app.utils.dependencies import get_current_active_user
+from app.services.recommendation_service import refresh_recommendations
 
 router = APIRouter(prefix="/screening", tags=["Screening"])
 
@@ -180,6 +181,7 @@ async def submit_answer(
 async def submit_screening(
     session_id: int,
     submission: BulkAnswerSubmit,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -214,7 +216,7 @@ async def submit_screening(
         # Get detailed responses
         _, detailed_responses = service.get_session_with_responses(session_id)
         
-        return ScreeningResultResponse(
+        result = ScreeningResultResponse(
             session_id=completed_session.id,
             user_id=completed_session.user_id,
             started_at=completed_session.started_at,
@@ -234,6 +236,10 @@ async def submit_screening(
             responses=[ScreeningResponseItem(**r) for r in detailed_responses],
             recommendations=get_risk_recommendations(completed_session.risk_level)
         )
+
+        # Refresh recommendations in background
+        background_tasks.add_task(refresh_recommendations, current_user.id, db)
+        return result
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

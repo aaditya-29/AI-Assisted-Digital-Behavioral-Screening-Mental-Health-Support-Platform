@@ -10,7 +10,7 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     type = Column(String(50), nullable=False)       # consultation_request, note_added, journal_shared, report_shared, resource_assigned, consultation_accepted, consultation_declined
-    title = Column(String(255), nullable=False)
+    title = Column(String(500), nullable=False)
     message = Column(Text, nullable=True)
     is_read = Column(Boolean, default=False, nullable=False)
     link = Column(String(500), nullable=True)         # frontend link to navigate to

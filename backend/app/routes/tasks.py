@@ -4,7 +4,7 @@ Task Routes
 API endpoints for behavioral tasks and session management.
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -24,6 +24,7 @@ from app.schemas.task import (
 )
 from app.services.task_service import TaskService
 from app.utils.dependencies import get_current_active_user
+from app.services.recommendation_service import check_and_update_recommendations
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -147,6 +148,7 @@ async def start_task_session(
 async def submit_task_session(
     session_id: int,
     submission: TaskSessionSubmit,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -177,7 +179,7 @@ async def submit_task_session(
         
         performance_summary = service.calculate_performance_summary(task, results)
         
-        return TaskSessionResponse(
+        result = TaskSessionResponse(
             session_id=completed_session.id,
             task_id=task.id,
             task_name=task.name,
@@ -191,6 +193,16 @@ async def submit_task_session(
             results=[TaskResultResponse(metric_name=r.metric_name, metric_value=r.metric_value) for r in results],
             performance_summary=performance_summary
         )
+
+        # Check if this task submission matches a pending recommendation
+        background_tasks.add_task(
+            check_and_update_recommendations,
+            current_user.id,
+            task.category or "",
+            completed_session.difficulty_level,
+            db,
+        )
+        return result
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -27,7 +27,7 @@ class ProfessionalProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
 
-    license_number = Column(String(100), nullable=False)
+    license_number = Column(String(500), nullable=False)
     specialty = Column(String(255), nullable=True)
     institution = Column(String(255), nullable=True)
 

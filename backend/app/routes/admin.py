@@ -26,6 +26,7 @@ from app.schemas.admin import (
 from app.schemas.professional import ConsultationRequestResponse
 from app.schemas.professional import ProfessionalProfileResponse
 from app.utils.dependencies import get_admin_user
+from app.utils.crypto import decrypt_text
 from pydantic import BaseModel
 
 
@@ -107,6 +108,7 @@ async def list_users(
         # Attach is_verified and full professional profile if present
         if u.professional_profile:
             data.is_verified = u.professional_profile.is_verified
+            u.professional_profile.license_number = decrypt_text(u.professional_profile.license_number) if u.professional_profile.license_number else u.professional_profile.license_number
             data.professional_profile = ProfessionalProfileResponse.model_validate(u.professional_profile)
         return data
 
@@ -137,6 +139,7 @@ async def get_user(
     result = UserListResponse.model_validate(user)
     if user.professional_profile:
         result.is_verified = user.professional_profile.is_verified
+        user.professional_profile.license_number = decrypt_text(user.professional_profile.license_number) if user.professional_profile.license_number else user.professional_profile.license_number
         result.professional_profile = ProfessionalProfileResponse.model_validate(user.professional_profile)
     return result
 
@@ -317,6 +320,7 @@ async def verify_professional(
 
     result = UserListResponse.model_validate(user)
     result.is_verified = profile.is_verified
+    profile.license_number = decrypt_text(profile.license_number) if profile.license_number else profile.license_number
     result.professional_profile = ProfessionalProfileResponse.model_validate(profile)
     return result
 
@@ -500,7 +504,7 @@ async def list_professional_applications(
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "email": user.email,
-                "license_number": p.license_number,
+                "license_number": decrypt_text(p.license_number) if p.license_number else p.license_number,
                 "specialty": p.specialty,
                 "institution": p.institution,
                 "applied_at": p.created_at.isoformat()

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
 from app.models.user import User, UserRole
+from app.utils.crypto import encrypt_text, decrypt_text
 from app.models.professional import (
     ProfessionalProfile,
     ConsultationRequest,
@@ -21,6 +22,7 @@ from app.models.screening import ScreeningSession
 from app.models.analysis import UserAnalysisSnapshot
 from app.models.journal import JournalEntry
 from app.models.task import Task, TaskSession, TaskResult
+from app.models.recommendation import Recommendation, RecommendationStatus
 from app.schemas.professional import (
     ProfessionalProfileCreate,
     ProfessionalProfileResponse,
@@ -65,7 +67,7 @@ async def create_professional_profile(
     
     profile = ProfessionalProfile(
         user_id=current_user.id,
-        license_number=profile_data.license_number,
+        license_number=encrypt_text(profile_data.license_number),
         specialty=profile_data.specialty,
         institution=profile_data.institution,
         is_verified=False  # Requires admin verification
@@ -75,6 +77,7 @@ async def create_professional_profile(
     db.commit()
     db.refresh(profile)
     
+    profile.license_number = decrypt_text(profile.license_number) if profile.license_number else profile.license_number
     return profile
 
 
@@ -94,6 +97,7 @@ async def get_my_professional_profile(
             detail="Professional profile not found"
         )
     
+    profile.license_number = decrypt_text(profile.license_number) if profile.license_number else profile.license_number
     return profile
 
 
@@ -121,6 +125,7 @@ async def update_professional_profile(
     db.commit()
     db.refresh(profile)
     
+    profile.license_number = decrypt_text(profile.license_number) if profile.license_number else profile.license_number
     return profile
 
 
@@ -289,6 +294,7 @@ async def update_consultation_request(
             "/connect-professional"
         )
 
+    consultation.message = decrypt_text(consultation.message) if consultation.message else consultation.message
     return consultation
 
 
@@ -410,7 +416,7 @@ async def get_patient_detail(
         } if latest_analysis else None,
         notes=[{
             "id": n.id,
-            "content": n.content,
+            "content": decrypt_text(n.content) if n.content else n.content,
             "created_at": n.created_at
         } for n in notes],
         consultation_date=consultation.created_at
@@ -448,7 +454,7 @@ async def add_professional_note(
     note = ProfessionalNote(
         user_id=patient_id,
         professional_id=professional.id,
-        content=note_data.content
+        content=encrypt_text(note_data.content)
     )
     
     db.add(note)
@@ -494,6 +500,8 @@ async def get_patient_notes(
         ProfessionalNote.professional_id == professional.id
     ).order_by(ProfessionalNote.created_at.desc()).all()
     
+    for n in notes:
+        n.content = decrypt_text(n.content) if n.content else n.content
     return notes
 
 
@@ -700,3 +708,127 @@ async def get_patient_task_analytics(
         "total_sessions": len(task_sessions),
         "pillar_analytics": pillar_analytics,
     }
+
+
+# =============================================================================
+# Patient AI Recommendations (Professional View)
+# =============================================================================
+
+@router.get("/patients/{patient_id}/recommendations")
+async def get_patient_recommendations(
+    patient_id: int,
+    professional: User = Depends(get_professional_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Get all recommendations for a patient (latest batch),
+    including completed/dismissed ones so the professional sees the full picture.
+    """
+    # Verify access
+    consultation = db.query(ConsultationRequest).filter(
+        ConsultationRequest.user_id == patient_id,
+        ConsultationRequest.professional_id == professional.id,
+        ConsultationRequest.status == "accepted"
+    ).first()
+    if not consultation:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Find the latest batch_id for this patient
+    latest = (
+        db.query(Recommendation)
+        .filter(
+            Recommendation.user_id == patient_id,
+            Recommendation.batch_id.isnot(None),
+        )
+        .order_by(Recommendation.created_at.desc())
+        .first()
+    )
+    if not latest:
+        return {"batch_id": None, "summary": None, "recommendations": []}
+
+    batch_id = latest.batch_id
+
+    recs = (
+        db.query(Recommendation)
+        .filter(
+            Recommendation.user_id == patient_id,
+            Recommendation.batch_id == batch_id,
+        )
+        .order_by(Recommendation.created_at)
+        .all()
+    )
+
+    summary = None
+    items = []
+    for r in recs:
+        decrypted = decrypt_text(r.reason) if r.reason else (r.reason or "")
+        if decrypted.startswith("[SUMMARY]"):
+            summary = decrypted.replace("[SUMMARY] ", "").replace("[SUMMARY]", "")
+            continue
+        items.append({
+            "id": r.id,
+            "reason": decrypted,
+            "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+            "redirect_link": r.redirect_link,
+            "comment": r.comment,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        })
+
+    return {
+        "batch_id": batch_id,
+        "summary": summary,
+        "recommendations": items,
+    }
+
+
+@router.patch("/patients/{patient_id}/recommendations/{rec_id}/dismiss")
+async def professional_dismiss_recommendation(
+    patient_id: int,
+    rec_id: int,
+    body: dict,
+    professional: User = Depends(get_professional_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Professional dismisses a patient's recommendation with a required comment.
+    """
+    # Verify access
+    consultation = db.query(ConsultationRequest).filter(
+        ConsultationRequest.user_id == patient_id,
+        ConsultationRequest.professional_id == professional.id,
+        ConsultationRequest.status == "accepted"
+    ).first()
+    if not consultation:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    rec = db.query(Recommendation).filter(
+        Recommendation.id == rec_id,
+        Recommendation.user_id == patient_id,
+    ).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+
+    comment = (body.get("comment") or "").strip()
+    if not comment:
+        raise HTTPException(status_code=400, detail="Comment is required when dismissing")
+
+    rec.status = RecommendationStatus.DISMISSED
+    rec.comment = f"[Professional: {professional.first_name} {professional.last_name}] {comment}"
+    db.commit()
+
+    # After dismissal, check async if the batch is now complete and trigger new analysis.
+    if rec.batch_id is not None:
+        from app.services.recommendation_service import trigger_batch_complete_check
+        try:
+            complete = trigger_batch_complete_check(patient_id, db)
+            if complete:
+                create_notification(
+                    db, patient_id, "recommendation_updated",
+                    "Recommendations Updated",
+                    "Your professional updated recommendations for you. Tap to review.",
+                    "/analysis?tab=recommendations",
+                )
+        except Exception:
+            pass
+
+    return {"message": "Recommendation dismissed by professional"}

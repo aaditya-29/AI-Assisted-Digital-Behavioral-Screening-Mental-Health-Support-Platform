@@ -51,6 +51,10 @@ async def get_notifications(
     if unread_only:
         query = query.filter(Notification.is_read == False)
     notifications = query.order_by(desc(Notification.created_at)).limit(limit).all()
+    from app.utils.crypto import decrypt_text
+    for n in notifications:
+        n.title = decrypt_text(n.title) if n.title else n.title
+        n.message = decrypt_text(n.message) if n.message else n.message
     return notifications
 
 
@@ -119,11 +123,12 @@ async def mark_all_as_read(
 
 def create_notification(db: Session, user_id: int, type: str, title: str, message: str = None, link: str = None):
     """Create an in-app notification for a user."""
+    from app.utils.crypto import encrypt_text
     notif = Notification(
         user_id=user_id,
         type=type,
-        title=title,
-        message=message,
+        title=encrypt_text(title) if title else title,
+        message=encrypt_text(message) if message else message,
         link=link
     )
     db.add(notif)

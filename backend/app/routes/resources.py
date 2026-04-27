@@ -122,6 +122,83 @@ async def get_patient_resources(
     return resources
 
 
+@router.get("/global", response_model=List[ResourceResponse])
+async def get_global_resources(
+    professional: User = Depends(get_professional_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Professional: get all global resources (patient_id = null, uploaded by admin/system).
+    Used to browse and recommend existing resources to patients.
+    """
+    resources = db.query(Resource).filter(
+        Resource.patient_id == None
+    ).order_by(Resource.id.desc()).all()
+    return resources
+
+
+@router.post("/recommend/{patient_id}/{resource_id}", status_code=status.HTTP_201_CREATED)
+async def recommend_global_resource_to_patient(
+    patient_id: int,
+    resource_id: int,
+    professional: User = Depends(get_professional_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Professional recommends an existing global resource to a specific patient.
+    Creates a Recommendation entry visible to the patient in their recommendations feed.
+    """
+    from app.models.recommendation import Recommendation, RecommendationStatus
+    from app.utils.crypto import encrypt_text
+
+    # Verify professional has an accepted consultation with this patient
+    accepted = db.query(ConsultationRequest).filter(
+        ConsultationRequest.user_id == patient_id,
+        ConsultationRequest.professional_id == professional.id,
+        ConsultationRequest.status == "accepted"
+    ).first()
+    if not accepted:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Patient has not shared data with you")
+
+    # Verify the resource exists and is global
+    resource = db.query(Resource).filter(
+        Resource.id == resource_id,
+        Resource.patient_id == None
+    ).first()
+    if not resource:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Global resource not found")
+
+    # Avoid duplicate pending recommendation for same resource + patient
+    existing = db.query(Recommendation).filter(
+        Recommendation.user_id == patient_id,
+        Recommendation.resource_id == resource_id,
+        Recommendation.status == RecommendationStatus.PENDING
+    ).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This resource is already recommended to this patient")
+
+    reason_text = f"[resource] Recommended by your professional: {resource.title}"
+    rec = Recommendation(
+        user_id=patient_id,
+        resource_id=resource_id,
+        reason=encrypt_text(reason_text),
+        status=RecommendationStatus.PENDING,
+    )
+    db.add(rec)
+    db.commit()
+
+    # Notify the patient
+    from app.routes.notifications import create_notification
+    create_notification(
+        db, patient_id, "resource_recommended",
+        "New Resource Recommended",
+        f"Your professional has recommended a resource for you: {resource.title}",
+        "/resources",
+    )
+
+    return {"detail": "Resource recommended successfully"}
+
+
 @router.delete("/{resource_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_patient_resource(
     resource_id: int,

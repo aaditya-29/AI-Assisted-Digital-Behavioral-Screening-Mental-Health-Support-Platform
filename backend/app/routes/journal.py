@@ -6,18 +6,67 @@ Users can create/read their own entries.
 Professionals can read journal entries of shared patients (only shared ones).
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from datetime import datetime
 from app.database import get_db
 from app.models.user import User
-from app.models.journal import JournalEntry
+from app.models.journal import JournalEntry, JournalAnalysis
 from app.models.professional import ConsultationRequest
 from app.utils.dependencies import get_current_active_user, get_professional_user
 from app.utils.crypto import encrypt_text, decrypt_text
+from app.services.journal_analysis_service import journal_analysis_service
+from app.services.recommendation_service import refresh_recommendations
 
 router = APIRouter(prefix="/journal", tags=["Journal"])
+
+
+# =============================================================================
+# Background task: analyse journal entry via Gemini
+# =============================================================================
+
+def _run_journal_analysis(journal_id: int, user_id: int, plain_text: str, db: Session) -> None:
+    """
+    Called from BackgroundTasks after a journal entry is persisted.
+    Invokes Gemini, then upserts a JournalAnalysis row.
+    After analysis, refreshes recommendations.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    result = journal_analysis_service.analyse(plain_text)
+    if result is None:
+        logger.warning("Journal analysis returned None for journal_id=%s", journal_id)
+        return
+
+    try:
+        analysis = db.query(JournalAnalysis).filter(
+            JournalAnalysis.journal_id == journal_id
+        ).first()
+
+        if analysis is None:
+            analysis = JournalAnalysis(journal_id=journal_id)
+            db.add(analysis)
+
+        analysis.mood_valence = result["mood_valence"]
+        analysis.anxiety_level = result["anxiety_level"]
+        analysis.social_engagement = result["social_engagement"]
+        analysis.sensory_sensitivity = result["sensory_sensitivity"]
+        analysis.emotional_regulation = result["emotional_regulation"]
+        analysis.repetitive_behavior = result["repetitive_behavior"]
+        analysis.raw_reasoning = encrypt_text(result["reasoning"]) if result["reasoning"] else None
+        analysis.model_version = result["model_version"]
+
+        db.commit()
+        logger.info("Journal analysis saved for journal_id=%s", journal_id)
+    except Exception:
+        logger.exception("Failed to save journal analysis for journal_id=%s", journal_id)
+        db.rollback()
+        return
+
+    # Refresh recommendations after analysis
+    refresh_recommendations(user_id, db)
 
 
 # =============================================================================
@@ -89,10 +138,11 @@ async def get_my_journal_entries(
 @router.post("/entries", response_model=JournalEntryResponse, status_code=status.HTTP_201_CREATED)
 async def create_journal_entry(
     data: JournalEntryCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new journal entry."""
+    """Create a new journal entry and trigger ASD attribute analysis in the background."""
     entry = JournalEntry(
         user_id=current_user.id,
         content=encrypt_text(data.content),
@@ -103,6 +153,10 @@ async def create_journal_entry(
     db.add(entry)
     db.commit()
     db.refresh(entry)
+
+    # Trigger Gemini analysis asynchronously — does not block the response
+    background_tasks.add_task(_run_journal_analysis, entry.id, current_user.id, data.content, db)
+
     return JournalEntryResponse.from_model(entry)
 
 

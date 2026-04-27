@@ -12,7 +12,7 @@ from sqlalchemy import func
 
 from app.database import get_db
 from app.models.user import User
-from app.models.journal import JournalEntry
+from app.models.journal import JournalEntry, JournalAnalysis
 from app.models.screening import ScreeningSession, RiskLevel
 from app.models.task import Task, TaskSession, TaskResult
 from app.utils.dependencies import get_current_active_user
@@ -95,6 +95,43 @@ async def get_analysis_summary(
         if score >= 5:
             return "Moderate"
         return "Low"
+
+    # ── Journal ASD attribute analysis ────────────────────────────────────
+    journal_asd_analyses = (
+        db.query(JournalAnalysis)
+        .join(JournalEntry, JournalAnalysis.journal_id == JournalEntry.id)
+        .filter(
+            JournalEntry.user_id == current_user.id,
+            JournalEntry.created_at >= thirty_days_ago,
+        )
+        .order_by(JournalEntry.created_at.asc())
+        .all()
+    )
+
+    asd_attrs = ["mood_valence", "anxiety_level", "social_engagement",
+                 "sensory_sensitivity", "emotional_regulation", "repetitive_behavior"]
+    asd_averages = {}
+    for attr in asd_attrs:
+        vals = [getattr(ja, attr) for ja in journal_asd_analyses if getattr(ja, attr) is not None]
+        asd_averages[attr] = round(sum(vals) / len(vals), 3) if vals else None
+
+    # Weekly ASD attribute trends
+    weekly_asd: dict = defaultdict(lambda: defaultdict(list))
+    for ja in journal_asd_analyses:
+        week_label = ja.journal_entry.created_at.strftime("W%U") if ja.journal_entry else None
+        if not week_label:
+            continue
+        for attr in asd_attrs:
+            val = getattr(ja, attr)
+            if val is not None:
+                weekly_asd[attr][week_label].append(val)
+
+    asd_trends = {}
+    for attr in asd_attrs:
+        asd_trends[attr] = [
+            {"week": w, "avg": round(sum(v) / len(v), 3)}
+            for w, v in sorted(weekly_asd[attr].items())
+        ]
 
     # ── Screening stats ─────────────────────────────────────────────────────
     screenings = (
@@ -328,6 +365,11 @@ async def get_analysis_summary(
             "stress_label": stress_label(avg_stress),
             "mood_trend": mood_trend,
             "stress_trend": stress_trend,
+            "asd_analysis": {
+                "analyzed_count": len(journal_asd_analyses),
+                "averages": asd_averages,
+                "trends": asd_trends,
+            },
         },
         "screening": {
             "total_completed": len(screenings),

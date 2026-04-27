@@ -5,6 +5,7 @@ from app.models.professional import ProfessionalProfile
 from app.schemas.user import UserCreate, UserUpdate
 from app.utils.security import get_password_hash, verify_password
 from app.utils.logging import get_logger
+from app.utils.crypto import encrypt_text, decrypt_text
 
 logger = get_logger(__name__)
 
@@ -34,7 +35,7 @@ def create_user(db: Session, user_data: UserCreate) -> User:
     if user_data.is_professional_applicant and user_data.license_number:
         profile = ProfessionalProfile(
             user_id=db_user.id,
-            license_number=user_data.license_number,
+            license_number=encrypt_text(user_data.license_number),
             specialty=user_data.specialty or "",
             institution=user_data.institution,
             is_verified=False

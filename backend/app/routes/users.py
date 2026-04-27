@@ -21,6 +21,7 @@ from app.schemas.professional import (
 )
 from app.schemas.user import ConsentLogCreate, ConsentLogResponse
 from app.utils.dependencies import get_current_active_user
+from app.utils.crypto import encrypt_text, decrypt_text
 from app.routes.notifications import create_notification
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -120,7 +121,7 @@ async def share_data_with_professional(
         user_id=current_user.id,
         professional_id=request_data.professional_id,
         status="pending",
-        message=request_data.message
+        message=encrypt_text(request_data.message) if request_data.message else None
     )
     
     db.add(consultation)
@@ -134,6 +135,9 @@ async def share_data_with_professional(
         f"{current_user.first_name} {current_user.last_name} wants to share their data with you.",
         "/professional/consultations"
     )
+
+    # Decrypt message after creating
+    consultation.message = decrypt_text(consultation.message) if consultation.message else None
 
     return consultation
 
@@ -155,6 +159,8 @@ async def get_my_sharing_requests(
         query = query.filter(ConsultationRequest.status == status_filter)
     
     requests = query.order_by(ConsultationRequest.created_at.desc()).all()
+    for r in requests:
+        r.message = decrypt_text(r.message) if r.message else r.message
     return requests
 
 
@@ -201,12 +207,15 @@ async def record_consent(
         user_id=current_user.id,
         consent_type=consent_data.consent_type,
         consented=consent_data.consented,
-        ip_address=consent_data.ip_address
+        ip_address=encrypt_text(consent_data.ip_address) if consent_data.ip_address else None
     )
     
     db.add(consent)
     db.commit()
     db.refresh(consent)
+    
+    # Decrypt ip_address before returning
+    consent.ip_address = decrypt_text(consent.ip_address) if consent.ip_address else None
     
     return consent
 
@@ -228,6 +237,8 @@ async def get_my_consents(
         query = query.filter(ConsentLog.consent_type == consent_type)
     
     consents = query.order_by(ConsentLog.created_at.desc()).all()
+    for c in consents:
+        c.ip_address = decrypt_text(c.ip_address) if c.ip_address else c.ip_address
     return consents
 
 
@@ -293,7 +304,7 @@ async def get_my_professional_notes(
         prof = db.query(User).filter(User.id == n.professional_id).first()
         result.append({
             "id": n.id,
-            "content": n.content,
+            "content": decrypt_text(n.content) if n.content else n.content,
             "created_at": n.created_at.isoformat(),
             "professional_name": f"{prof.first_name} {prof.last_name}" if prof else "Unknown"
         })

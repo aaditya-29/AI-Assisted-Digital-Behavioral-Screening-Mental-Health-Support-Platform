@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
+    GEMINI_API_KEY: str = ""
+    
+    GEMINI_MODEL_NAME: str = "gemini-2.5-flash"
+    GEMINI_FALLBACK_MODELS: List[str] = ["gemini-2.5-mini", "gemini-2.1"]
+    GEMINI_MAX_RETRY_ATTEMPTS: int = 3
+    GEMINI_RETRY_DELAY_SECONDS: int = 60
+
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_PERIOD: int = 60
     
