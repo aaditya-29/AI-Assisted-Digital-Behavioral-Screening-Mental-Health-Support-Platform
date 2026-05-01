@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { behavioralObservationService } from '../services/clinicalService'
-import Navbar from '../components/Navbar'
+import Navbar from '../components/NavBar'
 import { formatDateOnlyIST } from '../utils/formatDate'
 import '../index.css'
 

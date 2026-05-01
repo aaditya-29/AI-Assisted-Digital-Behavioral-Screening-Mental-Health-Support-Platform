@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { additionalScreeningService } from '../services/clinicalService'
-import Navbar from '../components/Navbar'
+import Navbar from '../components/NavBar'
 import { formatDateOnlyIST } from '../utils/formatDate'
 import '../index.css'
 

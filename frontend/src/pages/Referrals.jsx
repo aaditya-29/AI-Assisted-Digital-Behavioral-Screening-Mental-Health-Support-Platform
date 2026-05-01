@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { referralService, reportService } from '../services/clinicalService'
-import Navbar from '../components/Navbar'
+import Navbar from '../components/NavBar'
 import { formatDateOnlyIST } from '../utils/formatDate'
 import '../index.css'
 
