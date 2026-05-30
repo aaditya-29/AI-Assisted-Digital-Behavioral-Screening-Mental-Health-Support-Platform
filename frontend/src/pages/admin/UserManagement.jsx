@@ -90,7 +90,10 @@ function UserManagement() {
     try {
       await api.delete(`/admin/users/${userId}`)
       fetchUsers()
-    } catch (err) { alert('Failed to delete user') }
+    } catch (err) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Failed to delete user'
+      alert(errMsg)
+    }
   }
 
   const handleFilterChange = (key, value) => {
