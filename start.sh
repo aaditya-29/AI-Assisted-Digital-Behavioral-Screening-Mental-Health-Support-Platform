@@ -4,7 +4,7 @@ set -e
 echo "Starting backend..."
 cd /app/backend
 
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 echo "Waiting for backend to be ready..."
 MAX_RETRIES=10
