@@ -29,6 +29,12 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # Existing relationships
+    email_verifications = relationship(
+        "EmailVerification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     screening_sessions = relationship("ScreeningSession", back_populates="user", cascade="all, delete-orphan")
     task_sessions = relationship("TaskSession", back_populates="user", cascade="all, delete-orphan")
     journal_entries = relationship("JournalEntry", back_populates="user", cascade="all, delete-orphan")
